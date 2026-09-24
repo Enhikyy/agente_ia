@@ -64,7 +64,8 @@ class NovaDashboard extends StatefulWidget {
     required this.messages, required this.input, required this.scroll,
     required this.onSend, required this.onImport, required this.onBackup,
     required this.onEvolve, required this.onAppearance, required this.isReading,
-    this.onDiagnostics,
+    this.onDiagnostics, this.onCheckUpdates, this.onUpdate,
+    this.availableUpdateBuild, this.checkingUpdates = false, this.onRefine,
     required this.plugins, required this.onPlugin, required this.onResearch,
     required this.isThinking, required this.milestones,
     required this.onInstallLocal, required this.onInstallUrl,
@@ -79,7 +80,9 @@ class NovaDashboard extends StatefulWidget {
   final ScrollController scroll;
   final ValueChanged<String> onSend;
   final VoidCallback onImport, onBackup, onEvolve, onAppearance, onResearch;
-  final VoidCallback? onDiagnostics;
+  final VoidCallback? onDiagnostics, onCheckUpdates, onUpdate, onRefine;
+  final int? availableUpdateBuild;
+  final bool checkingUpdates;
   final bool isReading, isThinking, researching;
   final double researchProgress;
   final String researchStage;
@@ -461,6 +464,14 @@ class _NovaDashboardState extends State<NovaDashboard> {
           }),
       ])),
       const SizedBox(height: 15),
+      if (widget.availableUpdateBuild != null)
+        FilledButton.icon(onPressed: widget.onUpdate,
+          icon: const Icon(Icons.system_update),
+          label: Text('Atualizar NOVA (build ${widget.availableUpdateBuild})')),
+      OutlinedButton.icon(onPressed: widget.checkingUpdates ? null : widget.onCheckUpdates,
+        icon: const Icon(Icons.refresh), label: const Text('Verificar atualizações')),
+      OutlinedButton.icon(onPressed: widget.onRefine,
+        icon: const Icon(Icons.tune), label: const Text('Refinar parâmetros')),
       OutlinedButton.icon(onPressed: widget.onDiagnostics,
         icon: const Icon(Icons.monitor_heart_outlined),
         label: const Text('Exportar diagnóstico JSON')),
