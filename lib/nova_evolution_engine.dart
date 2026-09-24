@@ -139,8 +139,6 @@ class NovaEvolutionEngine {
     }
   }
 
-  static bool _sameMap(Map<String, int> a, Map<String, int> b) =>
-      a.length == b.length && a.keys.every((k) => a[k] == b[k]);
 }
 
 class EvolutionResult {
