@@ -404,15 +404,19 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       await const MethodChannel('nova/updates')
           .invokeMethod<void>('open', {'url': update.url.toString()});
     } on PlatformException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Falha ao abrir atualização: $error')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Falha ao abrir atualização: $error')));
+      }
     }
   }
 
   Future<void> refinarParametros() async {
     if (evaluationCases.length < 10) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Registre pelo menos 10 testes antes de refinar.')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Registre pelo menos 10 testes antes de refinar.')));
+      }
       return;
     }
     final before = retrievalThreshold;
@@ -436,8 +440,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     });
     if (generationReports.length > 100) generationReports.removeAt(0);
     await salvarMemoriaInstantanea();
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(result.reason)));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(result.reason)));
+    }
   }
 
   Future<void> exportarDiagnostico() async {
