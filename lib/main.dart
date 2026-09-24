@@ -336,10 +336,12 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
 
     setState(() {
       isCarregando = false;
-      if (mensagens.isEmpty) mensagens.add({
+      if (mensagens.isEmpty) {
+        mensagens.add({
         "texto": "NOVA local ativa. Memória simbólica disponível; modelo neural ainda não instalado.", 
         "isSystem": true
-      });
+        });
+      }
     });
   }
 
