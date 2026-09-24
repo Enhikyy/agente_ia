@@ -3,6 +3,9 @@ import 'nova_autonomy_policy.dart';
 import 'nova_education_assessment.dart';
 import 'nova_exam_runner.dart';
 import 'nova_research_curriculum.dart';
+import 'nova_generation_coordinator.dart';
+import 'nova_generation_archive.dart';
+import 'nova_portable_export.dart';
 import 'nova_updates.dart';
 import 'nova_resource_guard.dart';
 import 'nova_optimizer.dart';
@@ -437,6 +440,43 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         content: Text('Política salva: autonomia supervisionada e '
           'exclusão apenas de registros temporários descartáveis.')));
     }
+  }
+
+  /// Called only after independently measured, repeatable benchmarks.
+  /// Current optimizer does not measure RAM; it must not promote itself.
+  Future<void> promoverGeracaoVerificada({
+    required NovaGenerationMetrics anterior,
+    required NovaGenerationMetrics candidata,
+    required double novoThreshold,
+  }) async {
+    if (!novoThreshold.isFinite || novoThreshold < 0 || novoThreshold > 4) {
+      throw ArgumentError('Limiar fora dos limites.');
+    }
+    await salvarMemoriaInstantanea();
+    final directory = await getApplicationDocumentsDirectory();
+    final active = File('${directory.path}/matriz_neural_quantica_v6.json');
+    if (!await active.exists()) throw StateError('Estado ativo ausente.');
+    final old = Map<String, dynamic>.from(jsonDecode(await active.readAsString()) as Map);
+    final next = Map<String, dynamic>.from(old)
+      ..['retrievalThreshold'] = novoThreshold;
+    await const NovaGenerationCoordinator().promote(
+      archiveDirectory: Directory('${directory.path}/generations'),
+      baseline: anterior, candidate: candidata,
+      previousState: old, nextState: next,
+      persist: (snapshot) async {
+        final temp = File('${active.path}.promotion.tmp');
+        await temp.writeAsString(jsonEncode(snapshot), flush: true);
+        await temp.rename(active.path);
+      },
+    );
+    retrievalThreshold = novoThreshold;
+    generationReports.add({
+      'at': DateTime.now().toUtc().toIso8601String(),
+      'generationPromoted': true, 'previousThreshold': old['retrievalThreshold'],
+      'threshold': novoThreshold, 'accuracy': candidata.accuracy,
+      'latencyUs': candidata.latencyUs, 'memoryKb': candidata.memoryKb,
+    });
+    await salvarMemoriaInstantanea();
   }
 
   Future<void> refinarParametros() async {
