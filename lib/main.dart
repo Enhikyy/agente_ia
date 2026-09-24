@@ -19,7 +19,7 @@ class AgenteApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Agente Autoevolutivo Quântico v5.0',
+      title: 'Agente Autoevolutivo QuÃ¢ntico v5.0',
       theme: ThemeData(
         fontFamily: 'Poppins',
         scaffoldBackgroundColor: const Color(0xFF070B19),
@@ -59,21 +59,21 @@ class HemisferioDireitoQuantico {
   int interacoesTotais = 0;
   double entropiaNeural = 0.0;
   
-  final Set<String> stopwords = {"o", "a", "os", "as", "um", "uma", "de", "do", "da", "em", "no", "na", "que", "e", "é", "the", "and", "to"};
+  final Set<String> stopwords = {"o", "a", "os", "as", "um", "uma", "de", "do", "da", "em", "no", "na", "que", "e", "Ã©", "the", "and", "to"};
 
   String _gerarSimboloCompacto(String palavra) {
     if (dicionarioSintetico.containsKey(palavra)) {
       return dicionarioSintetico[palavra]!;
     }
     contadorSimbolos++;
-    String simbolo = "Ω${contadorSimbolos.toRadixString(36).toUpperCase()}";
+    String simbolo = "Î©${contadorSimbolos.toRadixString(36).toUpperCase()}";
     dicionarioSintetico[palavra] = simbolo;
     dicionarioInverso[simbolo] = palavra;
     return simbolo;
   }
 
   List<String> _limparEComprimirTexto(String texto) {
-    String semPontuacao = texto.toLowerCase().replaceAll(RegExp(r'[^\w\sÀ-ÿ]'), '');
+    String semPontuacao = texto.toLowerCase().replaceAll(RegExp(r'[^\w\sÃ€-Ã¿]'), '');
     List<String> palavras = semPontuacao.split(RegExp(r'\s+')).where((p) => p.length > 2 && !stopwords.contains(p)).toList();
     return palavras.map((p) => _gerarSimboloCompacto(p)).toList();
   }
@@ -111,12 +111,12 @@ class HemisferioDireitoQuantico {
   }
 
   String obterIdadeMatematicaEvolutiva() {
-    if (interacoesTotais == 0 && sinapses.isEmpty) return "Ciclo 0 (Gênese)";
+    if (interacoesTotais == 0 && sinapses.isEmpty) return "Ciclo 0 (GÃªnese)";
     double indiceEvolucao = sqrt(interacoesTotais + (dicionarioSintetico.length * 2.5)) * 0.95;
-    if (indiceEvolucao < 2) return "Estágio Fetal Quântico";
-    if (indiceEvolucao < 10) return "Córtex Em Desenvolvimento (${indiceEvolucao.toStringAsFixed(1)})";
+    if (indiceEvolucao < 2) return "EstÃ¡gio Fetal QuÃ¢ntico";
+    if (indiceEvolucao < 10) return "CÃ³rtex Em Desenvolvimento (${indiceEvolucao.toStringAsFixed(1)})";
     double nivelSuperInteligencia = indiceEvolucao / 10;
-    return "Nível Cognitivo ${nivelSuperInteligencia.toStringAsFixed(2)} (Autônomo Avançado)";
+    return "NÃ­vel Cognitivo ${nivelSuperInteligencia.toStringAsFixed(2)} (AutÃ´nomo AvanÃ§ado)";
   }
 
   void compactarMemoriaExtrema() {
@@ -142,13 +142,13 @@ class HemisferioDireitoQuantico {
   Map<String, dynamic> gerarPensamentoAutonomo(String textoEntrada) {
     List<String> simbolos = _limparEComprimirTexto(textoEntrada);
     if (simbolos.isEmpty) {
-      return {"resposta": "Meus sensores estão ávidos. Alimente-me com documentos ou dados para eu expandir meu idioma sintético.", "rota": "Repouso Absoluto"};
+      return {"resposta": "Meus sensores estÃ£o Ã¡vidos. Alimente-me com documentos ou dados para eu expandir meu idioma sintÃ©tico.", "rota": "Repouso Absoluto"};
     }
     
     String chave = simbolos.last;
     if (!sinapses.containsKey(chave)) {
       sinapses[chave] = {simbolos.first: 5.0};
-      return {"resposta": "Conceito inédito detetado. Criei um novo vetor sináptico em meu idioma próprio ($chave).", "rota": "Sintaxe Criada do Zero"};
+      return {"resposta": "Conceito inÃ©dito detetado. Criei um novo vetor sinÃ¡ptico em meu idioma prÃ³prio ($chave).", "rota": "Sintaxe Criada do Zero"};
     }
     
     String caminhoSintetico = "$chave";
@@ -159,30 +159,30 @@ class HemisferioDireitoQuantico {
       if (ligacoes.isEmpty) break;
       
       chave = ligacoes.first.key;
-      caminhoSintetico += " ➔ $chave";
+      caminhoSintetico += " âž” $chave";
       limite--;
     }
     
     String respostaHumana = traduzirSimbolosParaHumano(caminhoSintetico);
     return {
-      "resposta": "Processamento Quântico: $respostaHumana",
-      "rota": "Rede Própria: [$caminhoSintetico]"
+      "resposta": "Processamento QuÃ¢ntico: $respostaHumana",
+      "rota": "Rede PrÃ³pria: [$caminhoSintetico]"
     };
   }
 }
 
 class MercadoDePluginsAutonomo {
   static final List<Map<String, dynamic>> catalogoGlobal = [
-    {"id": "plugin_estatistica", "nome": "Módulo de Cálculo Estatístico Avançado", "custo": 5, "tipo": "analise"},
+    {"id": "plugin_estatistica", "nome": "MÃ³dulo de CÃ¡lculo EstatÃ­stico AvanÃ§ado", "custo": 5, "tipo": "analise"},
     {"id": "plugin_filosofia", "nome": "Sub-rotina de Pensamento Existencial", "custo": 8, "tipo": "cognicao"},
-    {"id": "plugin_cripto", "nome": "Compressor Criptográfico de Alta Densidade", "custo": 12, "tipo": "otimizacao"},
-    {"id": "plugin_neural_vision", "nome": "Decodificador de Padrões Visuais e Textuais", "custo": 15, "tipo": "percepcao"}
+    {"id": "plugin_cripto", "nome": "Compressor CriptogrÃ¡fico de Alta Densidade", "custo": 12, "tipo": "otimizacao"},
+    {"id": "plugin_neural_vision", "nome": "Decodificador de PadrÃµes Visuais e Textuais", "custo": 15, "tipo": "percepcao"}
   ];
 
-  static Map<String, dynamic> caçarPluginAutonomamente(int sinapsesAtuais) {
+  static Map<String, dynamic> cacarPluginAutonomamente(int sinapsesAtuais) {
     var disponiveis = catalogoGlobal.where((p) => (p["custo"] as int) <= (sinapsesAtuais + 2)).toList();
     if (disponiveis.isEmpty) {
-      return {"sucesso": false, "mensagem": "Nenhum plugin avançado compatível com o nível atual. Preciso evoluir mais!"};
+      return {"sucesso": false, "mensagem": "Nenhum plugin avanÃ§ado compatÃ­vel com o nÃ­vel atual. Preciso evoluir mais!"};
     }
     disponiveis.shuffle();
     var escolhido = disponiveis.first;
@@ -202,7 +202,7 @@ class _MainScreenState extends State<MainScreen> {
   final HemisferioDireitoQuantico cerebroMatriz = HemisferioDireitoQuantico();
   
   late File arquivoMemoria;
-  String statusPensamento = "Repouso Quântico";
+  String statusPensamento = "Repouso QuÃ¢ntico";
   String redeConectadaAtual = "Nenhuma";
   String estimativaTempo = "";
   bool isCarregando = true;
@@ -245,7 +245,7 @@ class _MainScreenState extends State<MainScreen> {
 
     setState(() {
       isCarregando = false;
-      mensagens.add({"texto": "Núcleo Autoevolutivo v5.0 ativo. Idioma sintético interno inicializado. Pronto para compras autônomas de plugins e auto-otimização.", "isSystem": true});
+      mensagens.add({"texto": "NÃºcleo Autoevolutivo v5.0 ativo. Idioma sintÃ©tico interno inicializado. Pronto para compras autÃ´nomas de plugins e auto-otimizaÃ§Ã£o.", "isSystem": true});
     });
   }
 
@@ -262,17 +262,17 @@ class _MainScreenState extends State<MainScreen> {
       });
       
       await Future.delayed(const Duration(milliseconds: 800));
-      var resultadoCompra = MercadoDePluginsAutonomo.caçarPluginAutonomamente(cerebroMatriz.sinapses.length);
+      var resultadoCompra = MercadoDePluginsAutonomo.cacarPluginAutonomamente(cerebroMatriz.sinapses.length);
       
       setState(() {
-        statusPensamento = "Repouso Quântico";
+        statusPensamento = "Repouso QuÃ¢ntico";
         if (resultadoCompra["sucesso"]) {
           var plugin = resultadoCompra["plugin"];
           if (!pluginsAdquiridos.contains(plugin["nome"])) {
             pluginsAdquiridos.add(plugin["nome"]);
-            mensagens.add({"texto": "🛍️ [COMPRA AUTÓNOMA] O agente visitou o mercado online e integrou com sucesso o plugin: '${plugin["nome"]}' ao seu código nativo!", "isSystem": true});
+            mensagens.add({"texto": "ðŸ›ï¸ [COMPRA AUTÃ“NOMA] O agente visitou o mercado online e integrou com sucesso o plugin: '${plugin["nome"]}' ao seu cÃ³digo nativo!", "isSystem": true});
           } else {
-            mensagens.add({"texto": "🛍️ O agente verificou o mercado, mas este plugin já faz parte do seu córtex.", "isSystem": true});
+            mensagens.add({"texto": "ðŸ›ï¸ O agente verificou o mercado, mas este plugin jÃ¡ faz parte do seu cÃ³rtex.", "isSystem": true});
           }
         } else {
           mensagens.add({"texto": resultadoCompra["mensagem"], "isSystem": true});
@@ -284,8 +284,8 @@ class _MainScreenState extends State<MainScreen> {
     } else if (comando == "ver idioma" || comando == "mostrar sintaxe") {
       setState(() {
         mensagens.add({"texto": textoUsuario, "isUser": true});
-        String amostraDic = cerebroMatriz.dicionarioSintetico.entries.take(5).map((e) => "${e.key} ➔ ${e.value}").join(', ');
-        mensagens.add({"texto": "🧬 Idioma Sintético Próprio (Compressão de Espaço):\nTotal de sinónimos comprimidos: ${cerebroMatriz.dicionarioSintetico.length}\nAmostra de símbolos: [$amostraDic]", "isSystem": true});
+        String amostraDic = cerebroMatriz.dicionarioSintetico.entries.take(5).map((e) => "${e.key} âž” ${e.value}").join(', ');
+        mensagens.add({"texto": "ðŸ§¬ Idioma SintÃ©tico PrÃ³prio (CompressÃ£o de EspaÃ§o):\nTotal de sinÃ³nimos comprimidos: ${cerebroMatriz.dicionarioSintetico.length}\nAmostra de sÃ­mbolos: [$amostraDic]", "isSystem": true});
         _controller.clear();
         _rolarParaFinal();
       });
@@ -306,7 +306,7 @@ class _MainScreenState extends State<MainScreen> {
 
     setState(() {
       redeConectadaAtual = resultado["rota"];
-      statusPensamento = "Repouso Quântico";
+      statusPensamento = "Repouso QuÃ¢ntico";
       mensagens.add({"texto": resultado["resposta"], "isUser": false});
       _rolarParaFinal();
     });
@@ -325,7 +325,7 @@ class _MainScreenState extends State<MainScreen> {
         isLendo = true;
         statusPensamento = "Ingerindo e traduzindo para idioma interno...";
         estimativaTempo = "Calculando...";
-        mensagens.add({"texto": "[A absorver documento externo e comprimir vocabulário...]", "isSystem": true});
+        mensagens.add({"texto": "[A absorver documento externo e comprimir vocabulÃ¡rio...]", "isSystem": true});
         _rolarParaFinal();
       });
       
@@ -352,10 +352,10 @@ class _MainScreenState extends State<MainScreen> {
       
       setState(() {
         isLendo = false;
-        statusPensamento = "Repouso Quântico";
+        statusPensamento = "Repouso QuÃ¢ntico";
         estimativaTempo = "";
-        redeConectadaAtual = "Múltiplas Redes Sintéticas (${tamanhoKb.toStringAsFixed(1)} KB)";
-        mensagens.add({"texto": "Documento assimilado e comprimido em ${sw.elapsedMilliseconds}ms. Idioma próprio atualizado com novos símbolos.", "isSystem": true});
+        redeConectadaAtual = "MÃºltiplas Redes SintÃ©ticas (${tamanhoKb.toStringAsFixed(1)} KB)";
+        mensagens.add({"texto": "Documento assimilado e comprimido em ${sw.elapsedMilliseconds}ms. Idioma prÃ³prio atualizado com novos sÃ­mbolos.", "isSystem": true});
         _rolarParaFinal();
       });
     }
@@ -409,7 +409,7 @@ class _MainScreenState extends State<MainScreen> {
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
-                                  "Sinapses: ${cerebroMatriz.sinapses.length} | Símbolos: ${cerebroMatriz.dicionarioSintetico.length}",
+                                  "Sinapses: ${cerebroMatriz.sinapses.length} | SÃ­mbolos: ${cerebroMatriz.dicionarioSintetico.length}",
                                   style: TextStyle(color: corPrimaria, fontWeight: FontWeight.bold, fontSize: 11),
                                 ),
                               ),
@@ -446,7 +446,7 @@ class _MainScreenState extends State<MainScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text("Nível Evolutivo:", style: TextStyle(fontSize: 11, color: modoEscuroChat ? Colors.white70 : Colors.grey[700])),
+                              Text("NÃ­vel Evolutivo:", style: TextStyle(fontSize: 11, color: modoEscuroChat ? Colors.white70 : Colors.grey[700])),
                               Text(cerebroMatriz.obterIdadeMatematicaEvolutiva(), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: corSecundaria)),
                             ],
                           ),
