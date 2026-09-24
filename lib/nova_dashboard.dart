@@ -66,7 +66,9 @@ class NovaDashboard extends StatefulWidget {
     required this.onEvolve, required this.onAppearance, required this.isReading,
     required this.plugins, required this.onPlugin, required this.onResearch,
     required this.isThinking, required this.milestones,
-    required this.onInstallLocal, required this.onInstallUrl});
+    required this.onInstallLocal, required this.onInstallUrl,
+    required this.researchProgress, required this.researchStage,
+    required this.researchMs, required this.researching});
   final NovaAppearance appearance;
   final int generation, concepts, experiences, responseMs;
   final Duration age;
@@ -76,7 +78,10 @@ class NovaDashboard extends StatefulWidget {
   final ScrollController scroll;
   final ValueChanged<String> onSend;
   final VoidCallback onImport, onBackup, onEvolve, onAppearance, onResearch;
-  final bool isReading, isThinking;
+  final bool isReading, isThinking, researching;
+  final double researchProgress;
+  final String researchStage;
+  final int researchMs;
   final List<NovaMilestone> milestones;
   final List<String> plugins;
   final ValueChanged<String> onPlugin;
@@ -230,9 +235,35 @@ class _NovaDashboardState extends State<NovaDashboard> {
         icon: const Icon(Icons.auto_awesome_rounded),
         label: const Text('Testar nova geração')),
       const SizedBox(height: 8),
-      OutlinedButton.icon(onPressed: widget.onResearch,
-        icon: const Icon(Icons.public_rounded),
-        label: const Text('Pesquisa na web — status')),
+      panel(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('PESQUISA NA WEB', style: TextStyle(color: subtle,
+          fontSize: 11, letterSpacing: 1.7)),
+        const SizedBox(height: 12),
+        Text(widget.researching ? widget.researchStage :
+          widget.researchProgress >= 1 ? 'Pesquisa concluída' :
+          'Wikipédia em português • fontes identificadas',
+          style: const TextStyle(fontSize: 13)),
+        const SizedBox(height: 12),
+        LinearProgressIndicator(value: widget.researchProgress,
+          minHeight: 9, borderRadius: BorderRadius.circular(12),
+          backgroundColor: Colors.white12,
+          color: widget.researchProgress >= 1 ? const Color(0xFF35D399) :
+            widget.researchProgress >= .5 ? const Color(0xFFFFA940) :
+            const Color(0xFFFF646E)),
+        const SizedBox(height: 8),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text('${(widget.researchProgress * 100).round()}% • '
+            '${widget.researchProgress >= 1 ? 'Concluído' : widget.researchProgress >= .5 ? 'Médio' : 'Baixo'}',
+            style: const TextStyle(color: subtle, fontSize: 12)),
+          Text('${widget.researchMs} ms',
+            style: const TextStyle(color: subtle, fontSize: 12)),
+        ]),
+        const SizedBox(height: 12),
+        SizedBox(width: double.infinity, child: FilledButton.icon(
+          onPressed: widget.researching ? null : widget.onResearch,
+          icon: const Icon(Icons.travel_explore_rounded),
+          label: Text(widget.researching ? 'Pesquisando...' : 'Pesquisar na web'))),
+      ])),
       const SizedBox(height: 12),
       const Text('As gerações representam compactação validada; não medem inteligência.',
         style: TextStyle(color: subtle, fontSize: 11)),
