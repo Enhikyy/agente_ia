@@ -1002,7 +1002,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           'Resultado preliminar: não concede aprovação. '
           'Gabarito e respostas precisam de verificação independente.',
         'isSystem': true,
-      })); }
+      }));
     } catch (error) {
       if (mounted) { setState(() => mensagens.add({
         'texto': 'Prova não processada: $error', 'isSystem': true,
@@ -1043,7 +1043,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           'Conteúdo registrado, não é demonstração de domínio. Progressão exige avaliação independente '
           'de pelo menos 20 questões e 95% de acertos por disciplina.',
         'isSystem': true,
-      })); }
+      }));
     } catch (error) {
       if (mounted) { setState(() => mensagens.add({
         'texto': 'Estudo autônomo adiado: $error', 'isSystem': true,
