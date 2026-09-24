@@ -24,7 +24,7 @@ class NovaDevelopmentalLanguage {
   void learnDocument(String text, {String source = 'documento'}) {
     if (text.trim().isEmpty) return;
     // Split by paragraph and sentence; bound the amount of retained text.
-    final chunks = text.split(RegExp(r'(?<=[.!?])\\s+|\\n\\s*\\n'))
+    final chunks = text.split(RegExp(r'(?<=[.!?])\s+|\n\s*\n'))
         .map((s) => s.trim())
         .where((s) => s.length > 24);
     for (final chunk in chunks) {
@@ -91,14 +91,14 @@ class NovaDevelopmentalLanguage {
     if (wantsSummary) {
       // Extractive overview, deliberately not claiming abstractive understanding.
       final selection = documentMemories.take(4).map((m) => m.text).join(' ');
-      return 'Resumo extrativo do material importado:\\n$selection\\n\\n'
+      return 'Resumo extrativo do material importado:\n$selection\n\n'
           'Esta versao seleciona trechos; ainda nao produz sinteses com um modelo neural.';
     }
     if (ranked.isNotEmpty && ranked.first.score > 0) {
       final selected = ranked.take(2).where((r) => r.score > 0).toList();
-      final evidence = selected.map((r) => r.memory.text).join('\\n\\n');
+      final evidence = selected.map((r) => r.memory.text).join('\n\n');
       final sources = selected.map((r) => r.memory.source).toSet().join(', ');
-      return 'Encontrei estes trechos relacionados ($sources):\\n$evidence\\n\\n'
+      return 'Encontrei estes trechos relacionados ($sources):\n$evidence\n\n'
           'Ainda estou aprendendo a relacionar ideias; isso nao e uma resposta gerada por LLM.';
     }
     return 'Ainda nao encontrei informacao suficiente na minha memoria local '
