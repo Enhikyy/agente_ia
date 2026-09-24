@@ -47,11 +47,18 @@ jobs:
           from PIL import Image, ImageOps
           root = pathlib.Path('android/app/src/main')
           manifest = root / 'AndroidManifest.xml'
+          ET.register_namespace('android', 'http://schemas.android.com/apk/res/android')
           tree = ET.parse(manifest)
           app = tree.getroot().find('application')
           android = '{http://schemas.android.com/apk/res/android}'
           app.set(android + 'label', 'NOVA')
           app.set(android + 'icon', '@mipmap/ic_launcher')
+          metadata = next((item for item in app.findall('meta-data')
+              if item.get(android + 'name') == 'flutterEmbedding'), None)
+          if metadata is None:
+              metadata = ET.SubElement(app, 'meta-data')
+              metadata.set(android + 'name', 'flutterEmbedding')
+          metadata.set(android + 'value', '2')
           tree.write(manifest, encoding='utf-8', xml_declaration=True)
           source = pathlib.Path('assets/branding/nova_icon.jpg.base64').read_text().strip()
           icon = Image.open(io.BytesIO(base64.b64decode(source))).convert('RGB')
