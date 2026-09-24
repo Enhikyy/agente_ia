@@ -168,23 +168,43 @@ class HemisferioDireitoQuantico {
     return json.encode(payload);
   }
 
+  // Valida integralmente antes de modificar a memoria em uso.
   bool restaurarPacoteCriogenico(String jsonString) {
     try {
       final decoded = json.decode(jsonString) as Map<String, dynamic>;
-      interacoesTotais = decoded["interacoes"] ?? 0;
-      contadorSimbolos = decoded["contador"] ?? 0;
-      
-      dicionarioSintetico = Map<String, String>.from(decoded["dicionario"] ?? {});
-      dicionarioInverso = Map<String, String>.from(decoded["inverso"] ?? {});
-      
-      sinapses.clear();
-      final sinMap = decoded["sinapses"] as Map<String, dynamic>? ?? {};
-      sinMap.forEach((k, v) {
-        Map<String, double> ligacoes = {};
-        (v as Map).forEach((sk, sv) => ligacoes[sk.toString()] = (sv as num).toDouble());
-        sinapses[k] = ligacoes;
+      if (decoded['versao'] != '6.0') return false;
+      final interacoes = decoded['interacoes'] as int;
+      final contador = decoded['contador'] as int;
+      if (interacoes < 0 || contador < 0) return false;
+      final dicionario = Map<String, String>.from(decoded['dicionario'] as Map);
+      final inverso = Map<String, String>.from(decoded['inverso'] as Map);
+      final sinMap = decoded['sinapses'] as Map;
+      final novasSinapses = <String, Map<String, double>>{};
+      sinMap.forEach((chave, valor) {
+        if (chave is! String || valor is! Map) {
+          throw const FormatException('Sinapse invalida');
+        }
+        final ligacoes = <String, double>{};
+        valor.forEach((destino, peso) {
+          if (destino is! String || peso is! num ||
+              !peso.toDouble().isFinite || peso < 0) {
+            throw const FormatException('Peso invalido');
+          }
+          ligacoes[destino] = peso.toDouble();
+        });
+        novasSinapses[chave] = ligacoes;
       });
-      
+      if (dicionario.length != inverso.length || contador < dicionario.length) {
+        return false;
+      }
+      for (final item in dicionario.entries) {
+        if (inverso[item.value] != item.key) return false;
+      }
+      interacoesTotais = interacoes;
+      contadorSimbolos = contador;
+      dicionarioSintetico = dicionario;
+      dicionarioInverso = inverso;
+      sinapses = novasSinapses;
       calcularEntropiaMatematica();
       return true;
     } catch (_) {
@@ -252,7 +272,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
 
   Future<void> salvarMemoriaInstantanea() async {
     try {
-      await arquivoMemoria.writeAsString(cerebroMatriz.gerarPacoteCriogenico());
+      final temporario = File('${arquivoMemoria.path}.tmp');
+      await temporario.writeAsString(cerebroMatriz.gerarPacoteCriogenico(), flush: true);
+      if (await arquivoMemoria.exists()) {
+        final anterior = File('${arquivoMemoria.path}.bak');
+        await arquivoMemoria.copy(anterior.path);
+      }
+      await temporario.rename(arquivoMemoria.path);
     } catch (_) {}
   }
 
@@ -264,12 +290,15 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       try {
         final dados = await arquivoMemoria.readAsString();
         if (dados.isNotEmpty) {
-          cerebroMatriz.restaurarPacoteCriogenico(dados);
+          if (!cerebroMatriz.restaurarPacoteCriogenico(dados)) {
+            final anterior = File('${arquivoMemoria.path}.bak');
+            if (await anterior.exists()) {
+              cerebroMatriz.restaurarPacoteCriogenico(await anterior.readAsString());
+            }
+          }
         }
-      } catch (_) { 
-        if (await arquivoMemoria.exists()) {
-          arquivoMemoria.deleteSync(); 
-        }
+      } catch (_) {
+        // Preserva o arquivo original para recuperacao manual.
       }
     } else {
       cerebroMatriz.aprenderComOtimizacao("A inteligencia artificial autonoma aprende atraves da otimizacao matematica e compressao de dados.");
