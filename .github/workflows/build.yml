@@ -161,6 +161,7 @@ jobs:
           sha256sum build/app/outputs/flutter-apk/*.apk | tee build/app/outputs/flutter-apk/SHA256SUMS.txt
 
       - name: Upload Artifact
+        if: env.NOVA_SIGNED == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: NOVA-Android-APK
