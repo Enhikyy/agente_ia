@@ -78,6 +78,7 @@ jobs:
               '<foreground android:drawable="@drawable/nova_icon_foreground"/>'
               '</adaptive-icon>')
           print('Verified NOVA launcher icon, label and adaptive icon resources.')
+          print(manifest.read_text())
           PY
 
       - name: Align Android toolchain versions
