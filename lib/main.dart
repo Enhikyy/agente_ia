@@ -19,9 +19,8 @@ class AgenteApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Agente Autoevolutivo Quântico v6.0',
+      title: 'Agente Autoevolutivo QuÃ¢ntico v6.0',
       theme: ThemeData(
-        fontFamily: 'Poppins',
         scaffoldBackgroundColor: const Color(0xFF070B19),
         primaryColor: const Color(0xFF4F46E5),
       ),
@@ -66,14 +65,14 @@ class HemisferioDireitoQuantico {
       return dicionarioSintetico[palavra]!;
     }
     contadorSimbolos++;
-    String simbolo = "Ω${contadorSimbolos.toRadixString(36).toUpperCase()}";
+    String simbolo = "Omega${contadorSimbolos.toRadixString(36).toUpperCase()}";
     dicionarioSintetico[palavra] = simbolo;
     dicionarioInverso[simbolo] = palavra;
     return simbolo;
   }
 
   List<String> limparEComprimirTexto(String texto) {
-    String semPontuacao = texto.toLowerCase().replaceAll(RegExp(r'[^\w\sÀ-ÿ]'), '');
+    String semPontuacao = texto.toLowerCase().replaceAll(RegExp(r'[^\w\sÃ€-Ã¿]'), '');
     List<String> palavras = semPontuacao.split(RegExp(r'\s+')).where((p) => p.length > 2 && !stopwords.contains(p)).toList();
     return palavras.map((p) => gerarSimboloCompacto(p)).toList();
   }
@@ -159,7 +158,7 @@ class HemisferioDireitoQuantico {
       if (ligacoes.isEmpty) break;
       
       chave = ligacoes.first.key;
-      caminhoSintetico += " ➔ $chave";
+      caminhoSintetico += " -> $chave";
       limite--;
     }
     
@@ -293,9 +292,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         }
       }
     } else {
-      // Sementes iniciais em PT-BR para entendimento universal imediato
-      cerebroMatriz.aprenderComOtimizacao("A inteligência artificial autônoma aprende através da otimização matemática e compressão de dados.");
-      cerebroMatriz.aprenderComOtimizacao("A física quântica e a teoria da informação explicam a entropia e as redes sinápticas.");
+      cerebroMatriz.aprenderComOtimizacao("A inteligÃªncia artificial autÃ´noma aprende atravÃ©s da otimizaÃ§Ã£o matemÃ¡tica e compressÃ£o de dados.");
+      cerebroMatriz.aprenderComOtimizacao("A fÃ­sica quÃ¢ntica e a teoria da informaÃ§Ã£o explicam a entropia e as redes sinÃ¡pticas.");
     }
 
     setState(() {
@@ -327,9 +325,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           String nomePlugin = plugin["nome"].toString();
           if (!pluginsAdquiridos.contains(nomePlugin)) {
             pluginsAdquiridos.add(nomePlugin);
-            mensagens.add({"texto": "🛍️ [COMPRA AUTONOMA] O agente integrou o plugin: '$nomePlugin'!", "isSystem": true});
+            mensagens.add({"texto": "ðŸ›ï¸ [COMPRA AUTONOMA] O agente integrou o plugin: '$nomePlugin'!", "isSystem": true});
           } else {
-            mensagens.add({"texto": "🛍️ Este plugin ja faz parte do cortex.", "isSystem": true});
+            mensagens.add({"texto": "ðŸ›ï¸ Este plugin ja faz parte do cortex.", "isSystem": true});
           }
         } else {
           mensagens.add({"texto": resultadoCompra["mensagem"], "isSystem": true});
@@ -342,8 +340,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     } else if (comando == "ver idioma" || comando == "mostrar sintaxe") {
       setState(() {
         mensagens.add({"texto": textoUsuario, "isUser": true});
-        String amostraDic = cerebroMatriz.dicionarioSintetico.entries.take(5).map((e) => "${e.key} ➔ ${e.value}").join(', ');
-        mensagens.add({"texto": "🧬 Idioma Sintetico Proprio:\nSinonimos: ${cerebroMatriz.dicionarioSintetico.length}\nAmostra: [$amostraDic]", "isSystem": true});
+        String amostraDic = cerebroMatriz.dicionarioSintetico.entries.take(5).map((e) => "${e.key} -> ${e.value}").join(', ');
+        mensagens.add({"texto": "ðŸ§¬ Idioma Sintetico Proprio:\nSinonimos: ${cerebroMatriz.dicionarioSintetico.length}\nAmostra: [$amostraDic]", "isSystem": true});
         _controller.clear();
         rolarParaFinal();
       });
@@ -386,7 +384,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       await backupFile.writeAsString(cerebroMatriz.gerarPacoteCriogenico());
       
       setState(() {
-        mensagens.add({"texto": "❄️ [CRIOGENIA ATIVADA] Backup quântico gerado com sucesso em:\n${backupFile.path}\nAs suas sinapses e idioma próprio estão guardados de forma segura!", "isSystem": true});
+        mensagens.add({"texto": "â„ï¸ [CRIOGENIA ATIVADA] Backup quÃ¢ntico gerado com sucesso em:\n${backupFile.path}\nAs suas sinapses e idioma prÃ³prio estÃ£o guardados de forma segura!", "isSystem": true});
         rolarParaFinal();
       });
     } catch (e) {
@@ -408,7 +406,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         if (sucesso) {
           await salvarMemoriaInstantanea();
           setState(() {
-            mensagens.add({"texto": "🔥 [REVITALIZACAO] Cortex descongelado! Memoria restaurada com ${cerebroMatriz.sinapses.length} sinapses.", "isSystem": true});
+            mensagens.add({"texto": "ðŸ”¥ [REVITALIZACAO] Cortex descongelado! Memoria restaurada com ${cerebroMatriz.sinapses.length} sinapses.", "isSystem": true});
             rolarParaFinal();
           });
         } else {
@@ -484,7 +482,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("⚙️ Painel de Ajustes e Diagnostico", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text("âš™ï¸ Painel de Ajustes e Diagnostico", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               ListTile(
                 leading: const Icon(Icons.ac_unit, color: Colors.cyanAccent),
@@ -522,7 +520,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                     cerebroMatriz.dicionarioSintetico.clear();
                     cerebroMatriz.dicionarioInverso.clear();
                     cerebroMatriz.interacoesTotais = 0;
-                    mensagens.add({"texto": "⚠️ [REINICIO] Cache limpo com sucesso.", "isSystem": true});
+                    mensagens.add({"texto": "âš ï¸ [REINICIO] Cache limpo com sucesso.", "isSystem": true});
                   });
                   Navigator.pop(context);
                 },
@@ -673,7 +671,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                         decoration: InputDecoration(
                           hintText: "Digite uma mensagem ou comando...",
                           hintStyle: TextStyle(color: modoEscuroChat ? Colors.white38 : Colors.grey[400]),
-                          border: InputBorder.none,
                         ),
                         onSubmitted: (val) => processarEntrada(val),
                       ),
