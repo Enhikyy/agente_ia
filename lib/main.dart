@@ -634,13 +634,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     if (comando == 'estudo autonomo parar' || comando == 'estudo autônomo parar') {
       autonomousStudyEnabled = false;
       await salvarMemoriaInstantanea();
-      if (mounted) setState(() => mensagens.add({'texto': 'Estudo autônomo desativado.', 'isSystem': true}));
+      if (mounted) { setState(() => mensagens.add({'texto': 'Estudo autônomo desativado.', 'isSystem': true}));
       return;
     }
     if (comando == 'estudo autonomo iniciar' || comando == 'estudo autônomo iniciar') {
       autonomousStudyEnabled = true;
       await salvarMemoriaInstantanea();
-      if (mounted) setState(() => mensagens.add({'texto': 'Estudo autônomo ativado.', 'isSystem': true}));
+      if (mounted) { setState(() => mensagens.add({'texto': 'Estudo autônomo ativado.', 'isSystem': true}));
       return;
     }
     if (comando == 'verificar atualizacoes' || comando == 'verificar atualizações') {
@@ -972,10 +972,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   Future<void> _runSchoolExam() async {
     final topic = NovaEducationProgress.nextSchoolTopic(educationAssessments);
     if (topic == null) {
-      if (mounted) setState(() => mensagens.add({
+      if (mounted) { setState(() => mensagens.add({
         'texto': 'Todas as disciplinas escolares possuem aprovação registrada.',
         'isSystem': true,
-      }));
+      })); }
       return;
     }
     try {
@@ -999,9 +999,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           'Resultado preliminar: não concede aprovação. '
           'Gabarito e respostas precisam de verificação independente.',
         'isSystem': true,
-      }));
+      })); }
     } catch (error) {
-      if (mounted) setState(() => mensagens.add({
+      if (mounted) { setState(() => mensagens.add({
         'texto': 'Prova não processada: $error', 'isSystem': true,
       }));
     }
@@ -1037,9 +1037,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           'Conteúdo registrado. Progressão exige avaliação independente '
           'de pelo menos 20 questões e 95% de acertos por disciplina.',
         'isSystem': true,
-      }));
+      })); }
     } catch (error) {
-      if (mounted) setState(() => mensagens.add({
+      if (mounted) { setState(() => mensagens.add({
         'texto': 'Estudo autônomo adiado: $error', 'isSystem': true,
       }));
     } finally {
