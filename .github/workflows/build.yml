@@ -1,4 +1,4 @@
-name: Compilar APK Agente Quantico v6.0
+name: Build APK
 ​on:
 push:
 branches: [ main ]
@@ -7,28 +7,24 @@ workflow_dispatch:
 build:
 runs-on: ubuntu-latest
 steps:
-- name: Baixar o codigo fonte
+- name: Checkout Code
 uses: actions/checkout@v4
-​- name: Configurar Java SDK
+​- name: Setup Java
 uses: actions/setup-java@v5
 with:
 distribution: 'zulu'
 java-version: '17'
-​- name: Configurar Flutter SDK
+​- name: Setup Flutter
 uses: subosito/flutter-action@v2
 with:
 flutter-version: '3.24.0'
 channel: 'stable'
-​- name: Limpar e Recriar Estrutura Android
-run: |
-rm -rf android
-flutter create --platforms android --project-name agente_ia .
-​- name: Descarregar Pacotes e Dependencias
+​- name: Get Dependencies
 run: flutter pub get
-​- name: Compilar APK Otimizado (Release)
+​- name: Build Release APK
 run: flutter build apk --release --split-per-abi
-​- name: Disponibilizar APK como Artefato
+​- name: Upload Artifact
 uses: actions/upload-artifact@v4
 with:
-name: Agente-Quantico-v6-APK
+name: Agent-APK
 path: build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
