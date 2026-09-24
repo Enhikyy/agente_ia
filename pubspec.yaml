@@ -1,5 +1,5 @@
 name: agente_ia
-description: Agente Evolutivo Otimizado para 4GB RAM
+description: Agente Evolutivo
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -15,4 +15,3 @@ dependencies:
 
 flutter:
   uses-material-design: true
-
