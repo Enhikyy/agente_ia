@@ -2,6 +2,8 @@ name: Build APK
 
 on:
   push:
+    branches: [ main, 'feature/**' ]
+  pull_request:
     branches: [ main ]
   workflow_dispatch:
 
@@ -34,8 +36,22 @@ jobs:
           rm -rf web/
           flutter create . --platforms=android --org com.agenteia.app
 
+      - name: Align Android toolchain versions
+        run: |
+          sed -i 's/id "org.jetbrains.kotlin.android" version "1.7.10"/id "org.jetbrains.kotlin.android" version "1.9.24"/' android/settings.gradle
+          sed -i 's/compileSdk = [0-9][0-9]*/compileSdk = 34/' android/app/build.gradle
+
+      - name: Remove Flutter template test
+        run: rm -f test/widget_test.dart
+
       - name: Get Dependencies
         run: flutter pub get
+
+      - name: Flutter analyze
+        run: flutter analyze
+
+      - name: Run Flutter tests
+        run: flutter test
 
       - name: Build Release APK
         run: flutter build apk --release --split-per-abi
