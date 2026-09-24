@@ -1,4 +1,28 @@
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
+
+final Future<Uint8List> _novaEmblem = rootBundle
+    .loadString('assets/branding/nova_icon.jpg.base64')
+    .then((text) => base64Decode(text.trim()));
+
+class NovaEmblem extends StatelessWidget {
+  const NovaEmblem({super.key, required this.size});
+  final double size;
+  @override
+  Widget build(BuildContext context) => FutureBuilder<Uint8List>(
+    future: _novaEmblem,
+    builder: (context, snapshot) => ClipRRect(
+      borderRadius: BorderRadius.circular(size * .23),
+      child: snapshot.hasData
+          ? Image.memory(snapshot.data!, width: size, height: size,
+              fit: BoxFit.cover, gaplessPlayback: true)
+          : SizedBox(width: size, height: size,
+              child: const Icon(Icons.hub_rounded)),
+    ),
+  );
+}
 
 enum NovaPalette { violet, ocean, forest }
 enum NovaDensity { comfortable, compact }
@@ -95,7 +119,9 @@ class _NovaDashboardState extends State<NovaDashboard> {
             Container(width: 38, height: 38,
               decoration: BoxDecoration(color: accent.withOpacity(.16),
                 borderRadius: BorderRadius.circular(13)),
-              child: Icon(widget.appearance.avatarIcon, color: accent)),
+              child: widget.appearance.avatar == 0
+                ? const NovaEmblem(size: 38)
+                : Icon(widget.appearance.avatarIcon, color: accent)),
             const SizedBox(width: 11),
             const Column(crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -139,7 +165,9 @@ class _NovaDashboardState extends State<NovaDashboard> {
         Container(width: 52, height: 52,
           decoration: BoxDecoration(color: accent.withOpacity(.15),
             borderRadius: BorderRadius.circular(17)),
-          child: Icon(widget.appearance.avatarIcon, color: accent, size: 29)),
+          child: widget.appearance.avatar == 0
+              ? const NovaEmblem(size: 52)
+              : Icon(widget.appearance.avatarIcon, color: accent, size: 29)),
         const SizedBox(width: 14),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -294,7 +322,7 @@ class _NovaDashboardState extends State<NovaDashboard> {
           style: TextStyle(fontWeight: FontWeight.w700)),
         const SizedBox(height: 12),
         Wrap(spacing: 12, children: List.generate(4, (i) =>
-          ChoiceChip(label: Icon([
+          ChoiceChip(label: i == 0 ? const NovaEmblem(size: 26) : Icon([
             Icons.hub_rounded, Icons.auto_awesome_rounded,
             Icons.psychology_rounded, Icons.blur_on_rounded][i]),
             selected: widget.appearance.avatar == i,
@@ -303,7 +331,7 @@ class _NovaDashboardState extends State<NovaDashboard> {
               widget.onAppearance();
             }))),
         const SizedBox(height: 10),
-        const Text('O ícone da tela inicial do Android é fixo nesta versão.',
+        const Text('O ícone da tela inicial do Android usa o emblema NOVA.',
           style: TextStyle(color: subtle, fontSize: 11)),
       ])),
       const SizedBox(height: 12),
