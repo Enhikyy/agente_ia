@@ -24,23 +24,15 @@ jobs:
           flutter-version: '3.24.0'
           channel: 'stable'
 
-      - name: Regenerar Estrutura Nativa Compatível
-        run: flutter create . --platforms=android
-
-      - name: Instalar Android SDK Platform 35 e Build-Tools
+      - name: Limpar estrutura antiga e recriar limpa
         run: |
-          echo "y" | sudo ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
-
-      - name: Forçar compileSdk 35 no build.gradle
-        run: |
-          sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 35/g' android/app/build.gradle
-          sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 35/g' android/app/build.gradle
-
-      - name: Atualizar versão do Kotlin no settings.gradle
-        run: |
-          if grep -q 'id "org.jetbrains.kotlin.android"' android/settings.gradle; then
-            sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.22"/g' android/settings.gradle
-          fi
+          rm -rf android/
+          rm -rf ios/
+          rm -rf macos/
+          rm -rf linux/
+          rm -rf windows/
+          rm -rf web/
+          flutter create . --platforms=android --org com.agenteia.app
 
       - name: Get Dependencies
         run: flutter pub get
