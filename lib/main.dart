@@ -137,7 +137,7 @@ class HemisferioDireitoQuantico {
       return {"resposta": "Conceito inedito detetado. Criei um novo vetor sinaptico ($chave).", "rota": "Sintaxe Criada do Zero"};
     }
     
-    String caminhoSintetico = "$chave";
+    String caminhoSintetico = chave;
     int limite = 7;
     
     while (limite > 0 && sinapses.containsKey(chave)) {
