@@ -636,7 +636,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       if (!mounted) return;
       final text = result.pages.isEmpty
         ? 'Nenhum artigo com resumo encontrado para: $term.'
-        : result.pages.map((p) => '${p.title}\\n${p.extract}\\nFonte: ${p.url}').join('\\n\\n');
+        : result.pages.map((p) => '${p.title}\n${p.extract}\nFonte: ${p.url}').join('\n\n');
       for (final p in result.pages) {
         linguagem.learnDocument('${p.title}. ${p.extract}', source: p.url);
         evolucao.observe('${p.title}. ${p.extract}');
@@ -645,7 +645,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       setState(() { lastResearchMs = timer.elapsedMilliseconds;
         lastResponseMs = lastResearchMs;
         mensagens.add({'texto': 'Pesquisa: $term', 'isUser': true});
-        mensagens.add({'texto': '$text\\n\\nPesquisa: ${lastResearchMs} ms; ${result.pages.length} fontes.', 'isUser': false});
+        mensagens.add({'texto': '$text\n\nPesquisa: ${lastResearchMs} ms; ${result.pages.length} fontes.', 'isUser': false});
         researchProgress = 1; researchStage = 'Concluído';
         statusPensamento = 'Pesquisa concluída'; });
       await salvarMemoriaInstantanea();
