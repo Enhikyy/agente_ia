@@ -87,7 +87,7 @@ class NovaDevelopmentalLanguage {
     }
   }
 
-  String answer(String question) {
+  String answer(String question, {double minScore = 0}) {
     final q = question.toLowerCase().trim();
     if (q.isEmpty) return 'Pode me contar o que voce gostaria de saber?';
     final wantsSummary = RegExp(r'resum|sintetiz|sumari|summary').hasMatch(q);
@@ -113,8 +113,8 @@ class NovaDevelopmentalLanguage {
       return 'Resumo extrativo do material importado:\n$selection\n\n'
           'Esta versao seleciona trechos; ainda nao produz sinteses com um modelo neural.';
     }
-    if (ranked.isNotEmpty && ranked.first.score > 0) {
-      final selected = ranked.take(2).where((r) => r.score > 0).toList();
+    if (ranked.isNotEmpty && ranked.first.score > minScore) {
+      final selected = ranked.take(2).where((r) => r.score > minScore).toList();
       final evidence = selected.map((r) => r.memory.text).join('\n\n');
       final sources = selected.map((r) => r.memory.source).toSet().join(', ');
       return 'Encontrei estes trechos relacionados ($sources):\n$evidence\n\n'
