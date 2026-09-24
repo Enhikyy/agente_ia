@@ -326,6 +326,19 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     if (textoUsuario.trim().isEmpty || isLendo) return;
 
     String comando = textoUsuario.toLowerCase().trim();
+    if (comando == 'evoluir' || comando == 'nova geracao') {
+      final resultado = evolucao.evolve();
+      setState(() {
+        mensagens.add({'texto': textoUsuario, 'isUser': true});
+        mensagens.add({'texto': resultado.accepted
+            ? 'Geracao ${resultado.generation} aprovada. Snapshot: ${resultado.beforeBytes} -> ${resultado.afterBytes} bytes.'
+            : 'Geracao mantida: ${resultado.reason}. Original: ${resultado.beforeBytes} bytes; candidato: ${resultado.afterBytes} bytes.',
+            'isSystem': true});
+        _controller.clear();
+      });
+      await salvarMemoriaInstantanea();
+      return;
+    }
     if (comando == "comprar plugin" || comando == "ir ao shopping") {
       setState(() {
         mensagens.add({"texto": textoUsuario, "isUser": true});
