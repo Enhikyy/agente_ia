@@ -1,3 +1,4 @@
+import 'nova_diagnostics.dart';
 import 'nova_resource_guard.dart';
 import 'nova_optimizer.dart';
 import 'nova_web_research.dart';
@@ -279,6 +280,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   NovaResourceDecision resourceDecision = const NovaResourceDecision(
     NovaResourceState.unavailable, 'Aguardando leitura dos sensores.');
   Timer? resourceTicker;
+  final List<Map<String, dynamic>> resourceSamples = [];
   static const _background = MethodChannel('nova/background');
   bool backgroundEnabled = false;
   bool resourceCheckBusy = false;
@@ -287,7 +289,21 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     if (resourceCheckBusy) return;
     resourceCheckBusy = true;
     try {
-      final decision = await resourceGuard.check();
+      final snapshot = await resourceGuard.read();
+      final decision = resourceGuard.decide(snapshot);
+      if (snapshot != null) {
+        resourceSamples.add({
+          'at': DateTime.now().toUtc().toIso8601String(),
+          'batteryPercent': snapshot.batteryPercent,
+          'temperatureC': snapshot.temperatureC,
+          'thermalStatus': snapshot.thermalStatus,
+          'availableMemoryMb': snapshot.availableMemoryMb,
+          'lowMemory': snapshot.lowMemory,
+          'charging': snapshot.charging,
+          'decision': decision.state.name,
+        });
+        if (resourceSamples.length > 500) resourceSamples.removeAt(0);
+      }
       if (mounted) setState(() { resourceDecision = decision; });
     } finally {
       resourceCheckBusy = false;
@@ -343,13 +359,46 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     try {
       if (!memoryReady) return;
       final temporario = File('${arquivoMemoria.path}.tmp');
-      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens, 'milestones': milestones.map((e) => e.toJson()).toList(), 'generationReports': generationReports, 'responseSamplesMs': responseSamplesMs, 'evaluationCases': evaluationCases, 'retrievalThreshold': retrievalThreshold, 'backgroundEnabled': backgroundEnabled}), flush: true);
+      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens, 'milestones': milestones.map((e) => e.toJson()).toList(), 'generationReports': generationReports, 'responseSamplesMs': responseSamplesMs, 'evaluationCases': evaluationCases, 'retrievalThreshold': retrievalThreshold, 'backgroundEnabled': backgroundEnabled, 'resourceSamples': resourceSamples}), flush: true);
       if (await arquivoMemoria.exists()) {
         final anterior = File('${arquivoMemoria.path}.bak');
         await arquivoMemoria.copy(anterior.path);
       }
       await temporario.rename(arquivoMemoria.path);
     } catch (_) {}
+  }
+
+  Future<void> exportarDiagnostico() async {
+    try {
+      final report = NovaDiagnostics.build(
+        generationReports: generationReports,
+        responseSamplesMs: responseSamplesMs,
+        resourceSamples: resourceSamples,
+        evaluationCount: evaluationCases.length,
+        generation: evolucao.generation,
+        concepts: evolucao.concepts,
+        experiences: evolucao.experiences,
+        retrievalThreshold: retrievalThreshold,
+      );
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/NOVA-diagnostico.json');
+      await file.writeAsString(NovaDiagnostics.encode(report), flush: true);
+      if (!mounted) return;
+      await showDialog<void>(context: context, builder: (dialogContext) =>
+        AlertDialog(
+          title: const Text('Diagnóstico exportado'),
+          content: SelectableText('Arquivo: ${file.path}\n\n'
+            'Inclui somente métricas agregadas, sem conversas nem documentos. '
+            'Use o gerenciador de arquivos para compartilhar o JSON.'),
+          actions: [TextButton(onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('OK'))],
+        ));
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Falha ao exportar diagnóstico: $error')));
+      }
+    }
   }
 
   Future<void> arranqueBiologico() async {
@@ -372,6 +421,26 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             appearance.restore(pacote['appearance']);
             final savedDate = DateTime.tryParse(pacote['createdAt']?.toString() ?? '');
             if (savedDate != null && !savedDate.isAfter(DateTime.now())) createdAt = savedDate;
+            if (pacote['resourceSamples'] is List) {
+              resourceSamples.addAll((pacote['resourceSamples'] as List)
+                .whereType<Map>().map((r) => Map<String, dynamic>.from(r)).take(500));
+            }
+            if (pacote['generationReports'] is List) {
+              generationReports.addAll((pacote['generationReports'] as List)
+                .whereType<Map>().map((r) => Map<String, dynamic>.from(r)).take(100));
+            }
+            if (pacote['responseSamplesMs'] is List) {
+              responseSamplesMs.addAll((pacote['responseSamplesMs'] as List)
+                .whereType<int>().take(200));
+            }
+            if (pacote['evaluationCases'] is List) {
+              evaluationCases.addAll((pacote['evaluationCases'] as List)
+                .whereType<Map>().map((r) => Map<String, String>.from(r)).take(100));
+            }
+            if (pacote['retrievalThreshold'] is num) {
+              retrievalThreshold = (pacote['retrievalThreshold'] as num).toDouble();
+            }
+            backgroundEnabled = pacote['backgroundEnabled'] == true;
             if (pacote['milestones'] is List) {
               milestones = (pacote['milestones'] as List)
                 .map(NovaMilestone.fromJson).whereType<NovaMilestone>()
@@ -440,6 +509,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             'Agendador Android indisponível nesta instalação.', 'isSystem': true}));
         }
       }
+      return;
+    }
+    if (comando == 'exportar diagnostico' || comando == 'exportar diagnóstico') {
+      await exportarDiagnostico();
       return;
     }
     if (comando == 'recursos' || comando == 'autonomia') {
@@ -822,6 +895,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       onSend: processarEntrada,
       onImport: lerBaseDeDados,
       onBackup: gerarBackupCriogenico,
+      onDiagnostics: exportarDiagnostico,
       onEvolve: () => processarEntrada('evoluir'),
       onAppearance: () {
         setState(() {});
