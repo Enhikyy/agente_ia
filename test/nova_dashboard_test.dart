@@ -17,6 +17,7 @@ void main() {
       onResearch: () {}, isReading: false,
       plugins: const [], onPlugin: (_) {},
       isThinking: false, milestones: const [],
+      onInstallLocal: () {}, onInstallUrl: () {},
     )));
     expect(find.text('Geração 002'), findsOneWidget);
     expect(find.text('14 ms'), findsOneWidget);
