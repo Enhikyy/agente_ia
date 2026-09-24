@@ -65,7 +65,8 @@ class NovaDashboard extends StatefulWidget {
     required this.onSend, required this.onImport, required this.onBackup,
     required this.onEvolve, required this.onAppearance, required this.isReading,
     required this.plugins, required this.onPlugin, required this.onResearch,
-    required this.isThinking, required this.milestones});
+    required this.isThinking, required this.milestones,
+    required this.onInstallLocal, required this.onInstallUrl});
   final NovaAppearance appearance;
   final int generation, concepts, experiences, responseMs;
   final Duration age;
@@ -79,6 +80,7 @@ class NovaDashboard extends StatefulWidget {
   final List<NovaMilestone> milestones;
   final List<String> plugins;
   final ValueChanged<String> onPlugin;
+  final VoidCallback onInstallLocal, onInstallUrl;
 
   @override
   State<NovaDashboard> createState() => _NovaDashboardState();
@@ -316,6 +318,31 @@ class _NovaDashboardState extends State<NovaDashboard> {
         'externo ainda não estão habilitados.',
         style: TextStyle(color: subtle)),
       const SizedBox(height: 18),
+      panel(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('PACOTES EXTERNOS', style: TextStyle(
+          fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.4)),
+        const SizedBox(height: 8),
+        const Text('Instale pacotes de conhecimento por arquivo ou HTTPS. '
+          'O APK continua leve; nenhum código externo é executado.',
+          style: TextStyle(color: subtle, fontSize: 12)),
+        const SizedBox(height: 12),
+        FilledButton.icon(onPressed: widget.onInstallLocal,
+          icon: const Icon(Icons.folder_open_rounded),
+          label: const Text('Instalar arquivo .nova.json')),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(onPressed: widget.onInstallUrl,
+          icon: const Icon(Icons.cloud_download_outlined),
+          label: const Text('Instalar por URL HTTPS')),
+        if (widget.plugins.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          ...widget.plugins.map((name) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Row(children: [Icon(Icons.check_circle_outline,
+              color: accent, size: 17), const SizedBox(width: 7),
+              Expanded(child: Text(name, style: const TextStyle(fontSize: 12)))]))),
+        ],
+      ])),
+      const SizedBox(height: 18),
       ...[
         ('Estatísticas locais', 'Contagem de conceitos e experiências',
           Icons.bar_chart_rounded, 'stats'),
@@ -336,8 +363,9 @@ class _NovaDashboardState extends State<NovaDashboard> {
             child: const Text('Abrir')),
         ])))),
       const SizedBox(height: 8),
-      panel(const Text('Catálogo externo: indisponível nesta versão. '
-        'A instalação futura exigirá confirmação e verificação de segurança.',
+      panel(const Text('Pacotes externos aceitos: dados e documentos JSON. '
+        'Instalação de APKs, bibliotecas nativas ou código de terceiros '
+        'não está habilitada.',
         style: TextStyle(color: subtle, height: 1.5))),
     ]);
 
