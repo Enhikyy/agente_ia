@@ -7,6 +7,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -36,6 +39,47 @@ jobs:
           rm -rf web/
           flutter create . --platforms=android --org com.agenteia.app
 
+      - name: Brand Android launcher as NOVA
+        run: |
+          python3 -m pip install --quiet Pillow
+          python3 - <<'PY'
+          import base64, io, pathlib, xml.etree.ElementTree as ET
+          from PIL import Image, ImageOps
+          root = pathlib.Path('android/app/src/main')
+          manifest = root / 'AndroidManifest.xml'
+          tree = ET.parse(manifest)
+          app = tree.getroot().find('application')
+          android = '{http://schemas.android.com/apk/res/android}'
+          app.set(android + 'label', 'NOVA')
+          app.set(android + 'icon', '@mipmap/ic_launcher')
+          tree.write(manifest, encoding='utf-8', xml_declaration=True)
+          source = pathlib.Path('assets/branding/nova_icon.jpg.base64').read_text().strip()
+          icon = Image.open(io.BytesIO(base64.b64decode(source))).convert('RGB')
+          for density, pixels in [('mdpi',48),('hdpi',72),('xhdpi',96),
+                                  ('xxhdpi',144),('xxxhdpi',192)]:
+              folder = root / 'res' / ('mipmap-' + density)
+              folder.mkdir(parents=True, exist_ok=True)
+              ImageOps.fit(icon, (pixels,pixels), method=Image.Resampling.LANCZOS).save(folder/'ic_launcher.png')
+          foreground = Image.new('RGBA',(432,432),(0,0,0,0))
+          art = ImageOps.fit(icon,(288,288),method=Image.Resampling.LANCZOS)
+          foreground.paste(art,(72,72))
+          drawable = root/'res/drawable-nodpi'
+          drawable.mkdir(parents=True,exist_ok=True)
+          foreground.save(drawable/'nova_icon_foreground.png')
+          colors = root/'res/values'
+          colors.mkdir(parents=True,exist_ok=True)
+          (colors/'nova_colors.xml').write_text(
+              '<resources><color name="nova_icon_bg">#0D3A2C</color></resources>')
+          adaptive = root/'res/mipmap-anydpi-v26'
+          adaptive.mkdir(parents=True,exist_ok=True)
+          (adaptive/'ic_launcher.xml').write_text(
+              '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">'
+              '<background android:drawable="@color/nova_icon_bg"/>'
+              '<foreground android:drawable="@drawable/nova_icon_foreground"/>'
+              '</adaptive-icon>')
+          print('Verified NOVA launcher icon, label and adaptive icon resources.')
+          PY
+
       - name: Align Android toolchain versions
         run: |
           sed -i 's/id "org.jetbrains.kotlin.android" version "1.7.10"/id "org.jetbrains.kotlin.android" version "1.9.24"/' android/settings.gradle
@@ -54,10 +98,28 @@ jobs:
         run: flutter test
 
       - name: Build Release APK
-        run: flutter build apk --release --split-per-abi
+        run: |
+          flutter build apk --release
+          flutter build apk --release --split-per-abi
+          ls -lh build/app/outputs/flutter-apk/*.apk
+          sha256sum build/app/outputs/flutter-apk/*.apk | tee build/app/outputs/flutter-apk/SHA256SUMS.txt
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Agente-Quantico-APK
-          path: build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+          name: NOVA-Android-APK
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+            build/app/outputs/flutter-apk/SHA256SUMS.txt
+          if-no-files-found: error
+
+      - name: Publish direct APK download (no ZIP)
+        if: github.ref == 'refs/heads/feature/nova-functional-dashboard'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view nova-preview >/dev/null 2>&1 || gh release create nova-preview --prerelease --title 'NOVA Android — versão de testes' --notes 'Build experimental. Instale somente o APK, sem extrair ZIP. A instalação no aparelho ainda precisa ser validada.' --target "$GITHUB_SHA"
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NOVA-universal.apk
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk build/app/outputs/flutter-apk/NOVA-moto-g62-arm64.apk
+          gh release upload nova-preview build/app/outputs/flutter-apk/NOVA-universal.apk build/app/outputs/flutter-apk/NOVA-moto-g62-arm64.apk build/app/outputs/flutter-apk/SHA256SUMS.txt --clobber

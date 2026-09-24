@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'nova_dashboard.dart';
 import 'nova_evolution_engine.dart';
 import 'nova_developmental_language.dart';
 import 'dart:convert';
@@ -21,7 +23,7 @@ class AgenteApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Agente Autoevolutivo Quantico',
+      title: 'NOVA',
       theme: ThemeData(
         scaffoldBackgroundColor: const Color(0xFF070B19),
         primaryColor: const Color(0xFF4F46E5),
@@ -246,6 +248,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   final NovaEvolutionEngine evolucao = NovaEvolutionEngine();
   
   late File arquivoMemoria;
+  final NovaAppearance appearance = NovaAppearance();
+  DateTime createdAt = DateTime.now();
+  int lastResponseMs = 0;
+  bool memoryReady = false;
+  Timer? ageTicker;
   String statusPensamento = "Repouso Quantico";
   bool isCarregando = true;
   bool isLendo = false;
@@ -257,11 +264,15 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     arranqueBiologico();
+    ageTicker = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted && !isCarregando) setState(() {});
+    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    ageTicker?.cancel();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -276,8 +287,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
 
   Future<void> salvarMemoriaInstantanea() async {
     try {
+      if (!memoryReady) return;
       final temporario = File('${arquivoMemoria.path}.tmp');
-      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState()}), flush: true);
+      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens}), flush: true);
       if (await arquivoMemoria.exists()) {
         final anterior = File('${arquivoMemoria.path}.bak');
         await arquivoMemoria.copy(anterior.path);
@@ -289,6 +301,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   Future<void> arranqueBiologico() async {
     final dir = await getApplicationDocumentsDirectory();
     arquivoMemoria = File('${dir.path}/matriz_neural_quantica_v6.json');
+    memoryReady = true;
 
     if (await arquivoMemoria.exists()) {
       try {
@@ -298,6 +311,15 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           final memoriaCore = pacote is Map && pacote.containsKey('core') ? json.encode(pacote['core']) : dados;
           if (pacote is Map && pacote['language'] != null) linguagem.importState(pacote['language']);
           if (pacote is Map && pacote['evolution'] != null) evolucao.importState(pacote['evolution']);
+          if (pacote is Map) {
+            appearance.restore(pacote['appearance']);
+            final savedDate = DateTime.tryParse(pacote['createdAt']?.toString() ?? '');
+            if (savedDate != null && !savedDate.isAfter(DateTime.now())) createdAt = savedDate;
+            if (pacote['messages'] is List) {
+              mensagens = (pacote['messages'] as List).whereType<Map>()
+                .map((m) => Map<String, dynamic>.from(m)).take(500).toList();
+            }
+          }
           if (!cerebroMatriz.restaurarPacoteCriogenico(memoriaCore)) {
             final anterior = File('${arquivoMemoria.path}.bak');
             if (await anterior.exists()) {
@@ -315,10 +337,12 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
 
     setState(() {
       isCarregando = false;
-      mensagens.add({
-        "texto": "Nucleo Autoevolutivo v6.0 ativo. Idioma sintetico e persistencia prontos.", 
+      if (mensagens.isEmpty) {
+        mensagens.add({
+        "texto": "NOVA local ativa. Memória simbólica disponível; modelo neural ainda não instalado.", 
         "isSystem": true
-      });
+        });
+      }
     });
   }
 
@@ -339,31 +363,12 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       await salvarMemoriaInstantanea();
       return;
     }
-    if (comando == "comprar plugin" || comando == "ir ao shopping") {
+    if (comando == 'comprar plugin' || comando == 'ir ao shopping') {
       setState(() {
-        mensagens.add({"texto": textoUsuario, "isUser": true});
-        statusPensamento = "Vasculhando mercado...";
-      });
-      
-      await Future.delayed(const Duration(milliseconds: 600));
-      var resultadoCompra = MercadoDePluginsAutonomo.cacarPluginAutonomamente(cerebroMatriz.sinapses.length);
-      
-      setState(() {
-        statusPensamento = "Repouso Quantico";
-        if (resultadoCompra["sucesso"]) {
-          var plugin = resultadoCompra["plugin"];
-          String nomePlugin = plugin["nome"].toString();
-          if (!pluginsAdquiridos.contains(nomePlugin)) {
-            pluginsAdquiridos.add(nomePlugin);
-            mensagens.add({"texto": "[COMPRA] O agente integrou o plugin: $nomePlugin!", "isSystem": true});
-          } else {
-            mensagens.add({"texto": "Este plugin ja faz parte do cortex.", "isSystem": true});
-          }
-        } else {
-          mensagens.add({"texto": resultadoCompra["mensagem"], "isSystem": true});
-        }
+        mensagens.add({'texto': textoUsuario, 'isUser': true});
+        mensagens.add({'texto': 'O catálogo externo ainda não está disponível. '
+          'Abra a aba Plugins para usar as ferramentas locais.', 'isSystem': true});
         _controller.clear();
-        rolarParaFinal();
       });
       await salvarMemoriaInstantanea();
       return;
@@ -379,7 +384,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       statusPensamento = "Processando...";
     });
 
+    final stopwatch = Stopwatch()..start();
     final resposta = linguagem.answer(textoUsuario);
+    stopwatch.stop();
+    lastResponseMs = stopwatch.elapsedMilliseconds;
     linguagem.learnConversation(textoUsuario);
     evolucao.observe(textoUsuario);
     cerebroMatriz.aprenderComOtimizacao(textoUsuario);
@@ -412,6 +420,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   }
 
   Future<void> lerBaseDeDados() async {
+    try {
     FilePickerResult? resultado = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf', 'txt']);
     if (resultado != null && resultado.files.single.path != null) {
       setState(() {
@@ -423,6 +432,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       
       final dadosArquivo = await compute(extrairTextoComMetricas, resultado.files.single.path!);
       String texto = dadosArquivo["texto"];
+      if (texto.trim().isEmpty) throw const FormatException('O documento não contém texto extraível.');
 
       linguagem.learnDocument(texto, source: resultado.files.single.name);
       evolucao.observe(texto);
@@ -440,6 +450,15 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         rolarParaFinal();
       });
     }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        isLendo = false;
+        statusPensamento = 'Falha na importação';
+        mensagens.add({'texto': 'Não foi possível importar o documento: $error',
+          'isSystem': true});
+      });
+    }
   }
 
   void rolarParaFinal() {
@@ -450,118 +469,56 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     });
   }
 
+  void _pluginAction(String id) {
+    if (id == 'compression') {
+      processarEntrada('evoluir');
+    } else if (id == 'documents') {
+      lerBaseDeDados();
+    } else {
+      setState(() => mensagens.add({
+        'texto': 'Estatísticas: ${evolucao.concepts} conceitos, '
+          '${evolucao.experiences} experiências, ${evolucao.connections} conexões.',
+        'isSystem': true,
+      }));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Estatísticas adicionadas ao chat.')));
+    }
+  }
+
+  void _researchStatus() {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('Pesquisa na web ainda não habilitada. '
+        'A NOVA permanece offline.')));
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isCarregando) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF070B19),
-        body: Center(child: CircularProgressIndicator(color: Color(0xFF4F46E5))),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-
-    return Scaffold(
-      backgroundColor: const Color(0xFF070B19),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF111827),
-        title: Row(
-          children: [
-            Text("Sinapses: ${cerebroMatriz.sinapses.length}", style: const TextStyle(fontSize: 12, color: Colors.indigoAccent)),
-            const SizedBox(width: 8),
-            Text("Geracao: ${evolucao.generation} | Conceitos: ${evolucao.concepts}", style: const TextStyle(fontSize: 12, color: Colors.white70)),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.ac_unit, color: Colors.cyanAccent),
-            onPressed: gerarBackupCriogenico,
-          ),
-          IconButton(
-            icon: const Icon(Icons.upload_file, color: Colors.amberAccent),
-            onPressed: isLendo ? null : lerBaseDeDados,
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(8),
-              color: const Color(0xFF111827).withOpacity(0.5),
-              child: Text(
-                "Idade: ${cerebroMatriz.obterIdadeMatematicaEvolutiva()} | Estado: $statusPensamento",
-                style: const TextStyle(color: Colors.pinkAccent, fontSize: 11, fontWeight: FontWeight.bold),
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(16),
-                itemCount: mensagens.length,
-                itemBuilder: (context, index) {
-                  final msg = mensagens[index];
-                  final isUser = msg["isUser"] ?? false;
-                  final isSystem = msg["isSystem"] ?? false;
-                  
-                  return Align(
-                    alignment: isSystem ? Alignment.center : (isUser ? Alignment.centerRight : Alignment.centerLeft),
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: isSystem ? Colors.transparent : (isUser ? const Color(0xFF4F46E5) : const Color(0xFF1F2937)),
-                        borderRadius: BorderRadius.circular(12),
-                        border: isSystem ? Border.all(color: Colors.white24) : null,
-                      ),
-                      child: Text(
-                        msg["texto"] ?? "",
-                        style: TextStyle(
-                          color: isSystem ? Colors.white70 : Colors.white,
-                          fontSize: isSystem ? 11 : 13,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            if (isLendo) const LinearProgressIndicator(color: Color(0xFF4F46E5)),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1F2937),
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextField(
-                        controller: _controller,
-                        enabled: !isLendo,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          hintText: "Digite mensagem ou comando...",
-                          hintStyle: TextStyle(color: Colors.white38),
-                          border: InputBorder.none,
-                        ),
-                        onSubmitted: (val) => processarEntrada(val),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.send_rounded, color: Color(0xFF4F46E5)),
-                      onPressed: () => processarEntrada(_controller.text),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return NovaDashboard(
+      appearance: appearance,
+      generation: evolucao.generation,
+      concepts: evolucao.concepts,
+      experiences: evolucao.experiences,
+      age: DateTime.now().difference(createdAt),
+      status: statusPensamento,
+      responseMs: lastResponseMs,
+      messages: mensagens,
+      input: _controller,
+      scroll: _scrollController,
+      onSend: processarEntrada,
+      onImport: lerBaseDeDados,
+      onBackup: gerarBackupCriogenico,
+      onEvolve: () => processarEntrada('evoluir'),
+      onAppearance: () {
+        setState(() {});
+        salvarMemoriaInstantanea();
+      },
+      onResearch: _researchStatus,
+      isReading: isLendo,
+      plugins: pluginsAdquiridos,
+      onPlugin: _pluginAction,
     );
   }
 }
-
-
