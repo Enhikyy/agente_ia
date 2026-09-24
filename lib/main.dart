@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'nova_dashboard.dart';
 import 'nova_evolution_engine.dart';
 import 'nova_developmental_language.dart';
@@ -262,11 +263,15 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     arranqueBiologico();
+    ageTicker = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted && !isCarregando) setState(() {});
+    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    ageTicker?.cancel();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -412,6 +417,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   }
 
   Future<void> lerBaseDeDados() async {
+    try {
     FilePickerResult? resultado = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf', 'txt']);
     if (resultado != null && resultado.files.single.path != null) {
       setState(() {
@@ -423,6 +429,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       
       final dadosArquivo = await compute(extrairTextoComMetricas, resultado.files.single.path!);
       String texto = dadosArquivo["texto"];
+      if (texto.trim().isEmpty) throw const FormatException('O documento não contém texto extraível.');
 
       linguagem.learnDocument(texto, source: resultado.files.single.name);
       evolucao.observe(texto);
@@ -438,6 +445,15 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         statusPensamento = "Repouso Quantico";
         mensagens.add({"texto": "Documento assimilado com sucesso.", "isSystem": true});
         rolarParaFinal();
+      });
+    }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        isLendo = false;
+        statusPensamento = 'Falha na importação';
+        mensagens.add({'texto': 'Não foi possível importar o documento: $error',
+          'isSystem': true});
       });
     }
   }
