@@ -5,7 +5,6 @@ import 'nova_exam_runner.dart';
 import 'nova_research_curriculum.dart';
 import 'nova_generation_coordinator.dart';
 import 'nova_generation_archive.dart';
-import 'nova_portable_export.dart';
 import 'nova_updates.dart';
 import 'nova_resource_guard.dart';
 import 'nova_optimizer.dart';
