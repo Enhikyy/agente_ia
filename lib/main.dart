@@ -1,5 +1,6 @@
 import 'nova_diagnostics.dart';
 import 'nova_autonomy_policy.dart';
+import 'nova_education_assessment.dart';
 import 'nova_updates.dart';
 import 'nova_resource_guard.dart';
 import 'nova_optimizer.dart';
@@ -291,6 +292,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   bool autoRefine = false;
   bool autonomousStudyEnabled = true;
   int schoolLessonsCompleted = 0;
+  final List<NovaAssessment> educationAssessments = [];
   DateTime? lastAutonomousStudy;
   Timer? studyTicker;
   static const schoolTopics = <String>['alfabetização', 'aritmética', 'ciências naturais', 'geografia', 'história', 'lógica', 'interpretação de texto', 'matemática'];
@@ -374,7 +376,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     try {
       if (!memoryReady) return;
       final temporario = File('${arquivoMemoria.path}.tmp');
-      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens, 'milestones': milestones.map((e) => e.toJson()).toList(), 'generationReports': generationReports, 'responseSamplesMs': responseSamplesMs, 'evaluationCases': evaluationCases, 'retrievalThreshold': retrievalThreshold, 'backgroundEnabled': backgroundEnabled, 'resourceSamples': resourceSamples, 'autoRefine': autoRefine, 'autonomyPolicy': autonomyPolicy.toJson(), 'autonomousStudyEnabled': autonomousStudyEnabled, 'schoolLessonsCompleted': schoolLessonsCompleted, 'lastAutonomousStudy': lastAutonomousStudy?.toIso8601String()}), flush: true);
+      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens, 'milestones': milestones.map((e) => e.toJson()).toList(), 'generationReports': generationReports, 'responseSamplesMs': responseSamplesMs, 'evaluationCases': evaluationCases, 'retrievalThreshold': retrievalThreshold, 'backgroundEnabled': backgroundEnabled, 'resourceSamples': resourceSamples, 'autoRefine': autoRefine, 'autonomyPolicy': autonomyPolicy.toJson(), 'autonomousStudyEnabled': autonomousStudyEnabled, 'schoolLessonsCompleted': schoolLessonsCompleted, 'educationAssessments': educationAssessments.map((a) => a.toJson()).toList(), 'lastAutonomousStudy': lastAutonomousStudy?.toIso8601String()}), flush: true);
       if (await arquivoMemoria.exists()) {
         final anterior = File('${arquivoMemoria.path}.bak');
         await arquivoMemoria.copy(anterior.path);
@@ -548,6 +550,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             autonomyPolicy = NovaAutonomyPolicy.fromJson(pacote['autonomyPolicy']);
             autonomousStudyEnabled = pacote['autonomousStudyEnabled'] != false;
             schoolLessonsCompleted = (pacote['schoolLessonsCompleted'] as num?)?.toInt() ?? 0;
+            if (pacote['educationAssessments'] is List) {
+              educationAssessments.addAll((pacote['educationAssessments'] as List)
+                .whereType<Map>().map((m) => NovaAssessment.fromJson(Map<String, dynamic>.from(m))));
+            }
             lastAutonomousStudy = DateTime.tryParse(pacote['lastAutonomousStudy']?.toString() ?? '');
             Future.delayed(const Duration(minutes: 1), () { if (mounted) _autonomousStudy(); });
             if (pacote['milestones'] is List) {
@@ -967,8 +973,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         now.difference(lastAutonomousStudy!) < const Duration(hours: 12)) return;
     await _checkResources();
     if (!resourceDecision.mayRunIntensive) return;
-    final topics = schoolLessonsCompleted < 24 ? schoolTopics : universityTopics;
-    final topic = topics[schoolLessonsCompleted % topics.length];
+    final graduated = NovaEducationProgress.mayGraduate(educationAssessments);
+    final topics = graduated ? universityTopics : schoolTopics;
+    final topic = graduated
+        ? topics[schoolLessonsCompleted % topics.length]
+        : NovaEducationProgress.nextSchoolTopic(educationAssessments)!;
     lastAutonomousStudy = now;
     setState(() { researching = true; researchStage = 'Estudando: $topic'; });
     try {
@@ -981,9 +990,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       }
       schoolLessonsCompleted++;
       setState(() => mensagens.add({
-        'texto': 'Diário de estudos — ${schoolLessonsCompleted <= 24 ? "Escola" : "Faculdade"}: '
+        'texto': 'Diário de estudos — ${graduated ? "Faculdade" : "Escola"}: '
           '$topic; ${result.pages.length} fontes da Wikipédia. '
-          'Conteúdo registrado, ainda não validado como aprendizado profundo.',
+          'Conteúdo registrado. Progressão exige avaliação independente '
+          'de pelo menos 20 questões e 95% de acertos por disciplina.',
         'isSystem': true,
       }));
     } catch (error) {
