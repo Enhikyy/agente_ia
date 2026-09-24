@@ -66,6 +66,7 @@ class NovaDashboard extends StatefulWidget {
     required this.onEvolve, required this.onAppearance, required this.isReading,
     this.onDiagnostics, this.onCheckUpdates, this.onUpdate,
     this.availableUpdateBuild, this.checkingUpdates = false, this.onRefine,
+    this.onSetSupervisedAutonomy, this.supervisedAutonomyConfigured = false,
     required this.plugins, required this.onPlugin, required this.onResearch,
     required this.isThinking, required this.milestones,
     required this.onInstallLocal, required this.onInstallUrl,
@@ -80,7 +81,9 @@ class NovaDashboard extends StatefulWidget {
   final ScrollController scroll;
   final ValueChanged<String> onSend;
   final VoidCallback onImport, onBackup, onEvolve, onAppearance, onResearch;
-  final VoidCallback? onDiagnostics, onCheckUpdates, onUpdate, onRefine;
+  final VoidCallback? onDiagnostics, onCheckUpdates, onUpdate, onRefine,
+      onSetSupervisedAutonomy;
+  final bool supervisedAutonomyConfigured;
   final int? availableUpdateBuild;
   final bool checkingUpdates;
   final bool isReading, isThinking, researching;
@@ -470,6 +473,25 @@ class _NovaDashboardState extends State<NovaDashboard> {
           label: Text('Atualizar NOVA (build ${widget.availableUpdateBuild})')),
       OutlinedButton.icon(onPressed: widget.checkingUpdates ? null : widget.onCheckUpdates,
         icon: const Icon(Icons.refresh), label: const Text('Verificar atualizações')),
+      panel(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Autonomia e memória',
+          style: TextStyle(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
+        Text(widget.supervisedAutonomyConfigured
+          ? 'Supervisionada: pesquisa autorizada e limpeza de cache descartável.'
+          : 'Configure a política de autonomia supervisionada.',
+          style: const TextStyle(color: subtle)),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(onPressed: widget.onSetSupervisedAutonomy,
+          icon: const Icon(Icons.shield_outlined),
+          label: const Text('Ativar autonomia supervisionada')),
+        const SizedBox(height: 6),
+        const Text('Documentos e memórias fornecidos por você não são '
+          'excluídos automaticamente. Pesquisa geral autônoma ainda requer '
+          'um agente com modelo de linguagem.',
+          style: TextStyle(color: subtle, fontSize: 12)),
+      ])),
+      const SizedBox(height: 12),
       OutlinedButton.icon(onPressed: widget.onRefine,
         icon: const Icon(Icons.tune), label: const Text('Refinar parâmetros')),
       OutlinedButton.icon(onPressed: widget.onDiagnostics,
