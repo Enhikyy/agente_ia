@@ -34,6 +34,9 @@ jobs:
           rm -rf web/
           flutter create . --platforms=android --org com.agenteia.app
 
+      - name: Remove Flutter template test
+        run: rm -f test/widget_test.dart
+
       - name: Get Dependencies
         run: flutter pub get
 
