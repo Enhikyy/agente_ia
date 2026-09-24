@@ -1,4 +1,5 @@
 import 'nova_diagnostics.dart';
+import 'nova_autonomy_policy.dart';
 import 'nova_updates.dart';
 import 'nova_resource_guard.dart';
 import 'nova_optimizer.dart';
@@ -288,6 +289,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   NovaUpdate? availableUpdate;
   bool checkingUpdates = false;
   bool autoRefine = false;
+  NovaAutonomyPolicy autonomyPolicy = const NovaAutonomyPolicy();
 
   Future<void> _checkResources() async {
     if (resourceCheckBusy) return;
@@ -364,7 +366,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     try {
       if (!memoryReady) return;
       final temporario = File('${arquivoMemoria.path}.tmp');
-      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens, 'milestones': milestones.map((e) => e.toJson()).toList(), 'generationReports': generationReports, 'responseSamplesMs': responseSamplesMs, 'evaluationCases': evaluationCases, 'retrievalThreshold': retrievalThreshold, 'backgroundEnabled': backgroundEnabled, 'resourceSamples': resourceSamples, 'autoRefine': autoRefine}), flush: true);
+      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens, 'milestones': milestones.map((e) => e.toJson()).toList(), 'generationReports': generationReports, 'responseSamplesMs': responseSamplesMs, 'evaluationCases': evaluationCases, 'retrievalThreshold': retrievalThreshold, 'backgroundEnabled': backgroundEnabled, 'resourceSamples': resourceSamples, 'autoRefine': autoRefine, 'autonomyPolicy': autonomyPolicy.toJson()}), flush: true);
       if (await arquivoMemoria.exists()) {
         final anterior = File('${arquivoMemoria.path}.bak');
         await arquivoMemoria.copy(anterior.path);
@@ -408,6 +410,21 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Falha ao abrir atualização: $error')));
       }
+    }
+  }
+
+  Future<void> configurarAutonomiaSupervisionada() async {
+    setState(() {
+      autonomyPolicy = const NovaAutonomyPolicy(
+        mode: NovaAutonomyMode.supervised,
+        deletion: NovaDeletionMode.disposableAutomatic,
+      );
+    });
+    await salvarMemoriaInstantanea();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Política salva: autonomia supervisionada e '
+          'exclusão apenas de registros temporários descartáveis.')));
     }
   }
 
@@ -520,6 +537,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             }
             backgroundEnabled = pacote['backgroundEnabled'] == true;
             autoRefine = pacote['autoRefine'] == true;
+            autonomyPolicy = NovaAutonomyPolicy.fromJson(pacote['autonomyPolicy']);
             if (pacote['milestones'] is List) {
               milestones = (pacote['milestones'] as List)
                 .map(NovaMilestone.fromJson).whereType<NovaMilestone>()
@@ -988,6 +1006,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       availableUpdateBuild: availableUpdate?.build,
       checkingUpdates: checkingUpdates,
       onRefine: refinarParametros,
+      onSetSupervisedAutonomy: configurarAutonomiaSupervisionada,
+      supervisedAutonomyConfigured: autonomyPolicy.mode == NovaAutonomyMode.supervised &&
+        autonomyPolicy.deletion == NovaDeletionMode.disposableAutomatic,
       onEvolve: () => processarEntrada('evoluir'),
       onAppearance: () {
         setState(() {});
