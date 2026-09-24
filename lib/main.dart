@@ -1,3 +1,4 @@
+import 'nova_web_research.dart';
 import 'nova_pack_installer.dart';
 import 'nova_growth_widgets.dart';
 import 'dart:async';
@@ -261,6 +262,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   bool isCarregando = true;
   bool isLendo = false;
   bool isThinking = false;
+  double researchProgress = 0;
+  String researchStage = "";
+  int lastResearchMs = 0;
+  bool researching = false;
   List<NovaMilestone> milestones = [];
   List<String> pluginsAdquiridos = [];
   List<Map<String, dynamic>> mensagens = [];
@@ -608,10 +613,50 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _researchStatus() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('Pesquisa na web ainda não habilitada. '
-        'A NOVA permanece offline.')));
+  Future<void> _researchStatus() async {
+    final input = TextEditingController();
+    final term = await showDialog<String>(context: context, builder: (context) =>
+      AlertDialog(title: const Text('Pesquisar na Wikipédia'),
+        content: TextField(controller: input, autofocus: true,
+          decoration: const InputDecoration(hintText: 'O que deseja pesquisar?')),
+        actions: [TextButton(onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.pop(context, input.text),
+            child: const Text('Pesquisar'))]));
+    input.dispose();
+    if (term == null || term.trim().length < 2 || researching) return;
+    setState(() { researching = true; researchProgress = 0;
+      researchStage = 'Iniciando pesquisa'; statusPensamento = researchStage; });
+    final timer = Stopwatch()..start();
+    try {
+      final result = await NovaWebResearch().search(term, onProgress: (value, stage) {
+        if (mounted) setState(() { researchProgress = value;
+          researchStage = stage; statusPensamento = stage; });
+      });
+      if (!mounted) return;
+      final text = result.pages.isEmpty
+        ? 'Nenhum artigo com resumo encontrado para: $term.'
+        : result.pages.map((p) => '${p.title}\\n${p.extract}\\nFonte: ${p.url}').join('\\n\\n');
+      for (final p in result.pages) {
+        linguagem.learnDocument('${p.title}. ${p.extract}', source: p.url);
+        evolucao.observe('${p.title}. ${p.extract}');
+      }
+      timer.stop();
+      setState(() { lastResearchMs = timer.elapsedMilliseconds;
+        lastResponseMs = lastResearchMs;
+        mensagens.add({'texto': 'Pesquisa: $term', 'isUser': true});
+        mensagens.add({'texto': '$text\\n\\nPesquisa: ${lastResearchMs} ms; ${result.pages.length} fontes.', 'isUser': false});
+        researchProgress = 1; researchStage = 'Concluído';
+        statusPensamento = 'Pesquisa concluída'; });
+      await salvarMemoriaInstantanea();
+    } catch (error) {
+      timer.stop();
+      if (mounted) setState(() { lastResearchMs = timer.elapsedMilliseconds;
+        researchStage = 'Falha na pesquisa'; statusPensamento = researchStage;
+        mensagens.add({'texto': 'Não foi possível pesquisar: $error', 'isSystem': true}); });
+    } finally {
+      if (mounted) setState(() { researching = false; });
+    }
   }
 
   @override
@@ -639,6 +684,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         salvarMemoriaInstantanea();
       },
       onResearch: _researchStatus,
+      researchProgress: researchProgress,
+      researchStage: researchStage,
+      researchMs: lastResearchMs,
+      researching: researching,
       isReading: isLendo,
       isThinking: isThinking,
       milestones: milestones,
