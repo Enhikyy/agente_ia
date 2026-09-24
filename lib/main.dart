@@ -630,8 +630,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     final timer = Stopwatch()..start();
     try {
       final result = await NovaWebResearch().search(term, onProgress: (value, stage) {
-        if (mounted) setState(() { researchProgress = value;
-          researchStage = stage; statusPensamento = stage; });
+        if (mounted) { setState(() { researchProgress = value;
+          researchStage = stage; statusPensamento = stage; }); }
       });
       if (!mounted) return;
       final text = result.pages.isEmpty
@@ -645,15 +645,15 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       setState(() { lastResearchMs = timer.elapsedMilliseconds;
         lastResponseMs = lastResearchMs;
         mensagens.add({'texto': 'Pesquisa: $term', 'isUser': true});
-        mensagens.add({'texto': '$text\n\nPesquisa: ${lastResearchMs} ms; ${result.pages.length} fontes.', 'isUser': false});
+        mensagens.add({'texto': '$text\n\nPesquisa: $lastResearchMs ms; ${result.pages.length} fontes.', 'isUser': false});
         researchProgress = 1; researchStage = 'Concluído';
         statusPensamento = 'Pesquisa concluída'; });
       await salvarMemoriaInstantanea();
     } catch (error) {
       timer.stop();
-      if (mounted) setState(() { lastResearchMs = timer.elapsedMilliseconds;
+      if (mounted) { setState(() { lastResearchMs = timer.elapsedMilliseconds;
         researchStage = 'Falha na pesquisa'; statusPensamento = researchStage;
-        mensagens.add({'texto': 'Não foi possível pesquisar: $error', 'isSystem': true}); });
+        mensagens.add({'texto': 'Não foi possível pesquisar: $error', 'isSystem': true}); }); }
     } finally {
       if (mounted) setState(() { researching = false; });
     }
