@@ -34,11 +34,11 @@ class _NovaTypingIndicatorState extends State<NovaTypingIndicator>
         const SizedBox(width: 10),
         for (var i = 0; i < 3; i++) ...[
           Transform.translate(
-            offset: Offset(0, -4 * math.max(0,
+            offset: Offset(0, -4 * math.max(0.0,
               math.sin(2 * math.pi * (_controller.value - i * .17)))),
             child: Container(width: 7, height: 7,
               decoration: BoxDecoration(color: widget.color.withOpacity(
-                .38 + .62 * math.max(0,
+                .38 + .62 * math.max(0.0,
                   math.sin(2 * math.pi * (_controller.value - i * .17)))),
                 shape: BoxShape.circle)),
           ),
@@ -198,7 +198,7 @@ class NovaGenerationTree extends StatelessWidget {
       for (var i = 1; i <= currentGeneration && i <= 100; i++) ...[
         Container(margin: const EdgeInsets.only(left: 22),
           width: 2, height: 21, color: color.withOpacity(.38)),
-        Padding(padding: EdgeInsets.only(left: math.min(i * 9.0, 72)),
+        Padding(padding: EdgeInsets.only(left: math.min(i * 9.0, 72.0)),
           child: _node('G$i · Descendente de G${i-1}',
             generations[i]?.description ?? 'Geração recuperada do backup',
             active: i == currentGeneration)),
