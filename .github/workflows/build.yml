@@ -7,6 +7,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -54,10 +57,28 @@ jobs:
         run: flutter test
 
       - name: Build Release APK
-        run: flutter build apk --release --split-per-abi
+        run: |
+          flutter build apk --release
+          flutter build apk --release --split-per-abi
+          ls -lh build/app/outputs/flutter-apk/*.apk
+          sha256sum build/app/outputs/flutter-apk/*.apk | tee build/app/outputs/flutter-apk/SHA256SUMS.txt
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Agente-Quantico-APK
-          path: build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+          name: NOVA-Android-APK
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+            build/app/outputs/flutter-apk/SHA256SUMS.txt
+          if-no-files-found: error
+
+      - name: Publish direct APK download (no ZIP)
+        if: github.ref == 'refs/heads/feature/nova-functional-dashboard'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view nova-preview >/dev/null 2>&1 || gh release create nova-preview --prerelease --title 'NOVA Android — versão de testes' --notes 'Build experimental. Instale somente o APK, sem extrair ZIP. A instalação no aparelho ainda precisa ser validada.' --target "$GITHUB_SHA"
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NOVA-universal.apk
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk build/app/outputs/flutter-apk/NOVA-moto-g62-arm64.apk
+          gh release upload nova-preview build/app/outputs/flutter-apk/NOVA-universal.apk build/app/outputs/flutter-apk/NOVA-moto-g62-arm64.apk build/app/outputs/flutter-apk/SHA256SUMS.txt --clobber
