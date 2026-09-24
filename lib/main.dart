@@ -23,7 +23,7 @@ class AgenteApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Agente Autoevolutivo Quantico',
+      title: 'NOVA',
       theme: ThemeData(
         scaffoldBackgroundColor: const Color(0xFF070B19),
         primaryColor: const Color(0xFF4F46E5),
