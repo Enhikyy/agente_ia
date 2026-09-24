@@ -44,6 +44,8 @@ jobs:
           activity=$(find android/app/src/main/kotlin -name MainActivity.kt -print -quit)
           test -n "$activity"
           cp tooling/NovaMainActivity.kt "$activity"
+          cp tooling/NovaBackgroundWorker.kt "$(dirname "$activity")/NovaBackgroundWorker.kt"
+          sed -i '/^dependencies {/a\\    implementation "androidx.work:work-runtime-ktx:2.9.1"' android/app/build.gradle
 
       - name: Brand Android launcher as NOVA
         run: |
