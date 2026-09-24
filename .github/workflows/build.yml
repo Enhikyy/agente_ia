@@ -26,5 +26,5 @@ run: flutter build apk --release --split-per-abi
 ​- name: Upload Artifact
 uses: actions/upload-artifact@v4
 with:
-name: Agent-APK
+name: Agente-Quantico-APK
 path: build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
