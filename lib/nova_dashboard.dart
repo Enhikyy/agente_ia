@@ -68,7 +68,7 @@ class _NovaDashboardState extends State<NovaDashboard> {
     padding: padding ?? const EdgeInsets.all(16),
     decoration: BoxDecoration(color: surface,
       borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: Colors.white.withValues(alpha: .065))),
+      border: Border.all(color: Colors.white.withOpacity(.065))),
     child: child);
 
   Widget stat(String name, String value, IconData icon) => Expanded(
@@ -93,7 +93,7 @@ class _NovaDashboardState extends State<NovaDashboard> {
           titleSpacing: 18,
           title: Row(children: [
             Container(width: 38, height: 38,
-              decoration: BoxDecoration(color: accent.withValues(alpha: .16),
+              decoration: BoxDecoration(color: accent.withOpacity(.16),
                 borderRadius: BorderRadius.circular(13)),
               child: Icon(widget.appearance.avatarIcon, color: accent)),
             const SizedBox(width: 11),
@@ -117,7 +117,7 @@ class _NovaDashboardState extends State<NovaDashboard> {
         ])),
         bottomNavigationBar: NavigationBar(
           backgroundColor: const Color(0xFF101626),
-          selectedIndex: page, indicatorColor: accent.withValues(alpha: .19),
+          selectedIndex: page, indicatorColor: accent.withOpacity(.19),
           onDestinationSelected: (i) => setState(() => page = i),
           destinations: const [
             NavigationDestination(icon: Icon(Icons.space_dashboard_outlined),
@@ -137,7 +137,7 @@ class _NovaDashboardState extends State<NovaDashboard> {
     return ListView(padding: const EdgeInsets.all(18), children: [
       panel(Row(children: [
         Container(width: 52, height: 52,
-          decoration: BoxDecoration(color: accent.withValues(alpha: .15),
+          decoration: BoxDecoration(color: accent.withOpacity(.15),
             borderRadius: BorderRadius.circular(17)),
           child: Icon(widget.appearance.avatarIcon, color: accent, size: 29)),
         const SizedBox(width: 14),
@@ -215,10 +215,10 @@ class _NovaDashboardState extends State<NovaDashboard> {
             padding: EdgeInsets.all(widget.appearance.density ==
               NovaDensity.compact ? 10 : 15),
             decoration: BoxDecoration(
-              color: user ? accent.withValues(alpha: .24) : surface,
+              color: user ? accent.withOpacity(.24) : surface,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: user ?
-                accent.withValues(alpha: .35) : Colors.white10)),
+                accent.withOpacity(.35) : Colors.white10)),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(user ? 'VOCÊ' : system ? 'SISTEMA' : 'NOVA',
