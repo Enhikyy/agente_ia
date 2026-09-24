@@ -298,8 +298,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   final List<NovaAssessment> educationAssessments = [];
   DateTime? lastAutonomousStudy;
   Timer? studyTicker;
-  static const schoolTopics = <String>['alfabetização', 'aritmética', 'ciências naturais', 'geografia', 'história', 'lógica', 'interpretação de texto', 'matemática'];
-  static const universityTopics = <String>['método científico', 'estatística', 'álgebra linear', 'epistemologia', 'ciência da computação', 'aprendizado de máquina', 'ética em inteligência artificial'];
   NovaAutonomyPolicy autonomyPolicy = const NovaAutonomyPolicy();
 
   Future<void> _checkResources() async {
