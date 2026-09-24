@@ -51,6 +51,9 @@ jobs:
           tree = ET.parse(manifest)
           app = tree.getroot().find('application')
           android = '{http://schemas.android.com/apk/res/android}'
+          permission = ET.Element('uses-permission')
+          permission.set(android + 'name', 'android.permission.INTERNET')
+          tree.getroot().insert(0, permission)
           app.set(android + 'label', 'NOVA')
           app.set(android + 'icon', '@mipmap/ic_launcher')
           metadata = next((item for item in app.findall('meta-data')
@@ -123,7 +126,7 @@ jobs:
           if-no-files-found: error
 
       - name: Publish direct APK download (no ZIP)
-        if: github.ref == 'refs/heads/feature/nova-timeline-typing'
+        if: github.ref == 'refs/heads/feature/nova-external-packs'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
