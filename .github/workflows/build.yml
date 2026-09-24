@@ -39,6 +39,12 @@ jobs:
           rm -rf web/
           flutter create . --platforms=android --org com.agenteia.app
 
+      - name: Install Android resource monitoring bridge
+        run: |
+          activity=$(find android/app/src/main/kotlin -name MainActivity.kt -print -quit)
+          test -n "$activity"
+          cp tooling/NovaMainActivity.kt "$activity"
+
       - name: Brand Android launcher as NOVA
         run: |
           python3 -m pip install --quiet Pillow
