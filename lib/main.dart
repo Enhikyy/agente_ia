@@ -1,6 +1,7 @@
 import 'nova_diagnostics.dart';
 import 'nova_autonomy_policy.dart';
 import 'nova_education_assessment.dart';
+import 'nova_exam_runner.dart';
 import 'nova_updates.dart';
 import 'nova_resource_guard.dart';
 import 'nova_optimizer.dart';
@@ -626,6 +627,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       }
       return;
     }
+    if (comando == 'avaliacao escolar' || comando == 'avaliação escolar') {
+      await _runSchoolExam(); return;
+    }
     if (comando == 'estudar agora') { await _autonomousStudy(); return; }
     if (comando == 'estudo autonomo parar' || comando == 'estudo autônomo parar') {
       autonomousStudyEnabled = false;
@@ -962,6 +966,44 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       }));
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Estatísticas adicionadas ao chat.')));
+    }
+  }
+
+  Future<void> _runSchoolExam() async {
+    final topic = NovaEducationProgress.nextSchoolTopic(educationAssessments);
+    if (topic == null) {
+      if (mounted) setState(() => mensagens.add({
+        'texto': 'Todas as disciplinas escolares possuem aprovação registrada.',
+        'isSystem': true,
+      }));
+      return;
+    }
+    try {
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.custom, allowedExtensions: ['json']);
+      if (picked == null || picked.files.single.path == null) return;
+      final file = File(picked.files.single.path!);
+      if (await file.length() > 1024 * 1024) {
+        throw const FormatException('Prova maior que 1 MB.');
+      }
+      final questions = const NovaExamRunner().parse(await file.readAsString());
+      // This is an automated preliminary score. It cannot certify the
+      // independence or correctness of an externally supplied answer key.
+      final score = const NovaExamRunner().grade(
+        topic: topic, questions: questions, language: linguagem,
+        now: DateTime.now(), independentKeyConfirmed: false);
+      if (!mounted) return;
+      setState(() => mensagens.add({
+        'texto': 'Simulado de $topic: ${score.correct}/${score.total} '
+          '(${(score.accuracy * 100).toStringAsFixed(1)}%). '
+          'Resultado preliminar: não concede aprovação. '
+          'Gabarito e respostas precisam de verificação independente.',
+        'isSystem': true,
+      }));
+    } catch (error) {
+      if (mounted) setState(() => mensagens.add({
+        'texto': 'Prova não processada: $error', 'isSystem': true,
+      }));
     }
   }
 
