@@ -484,7 +484,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                     Expanded(
                       child: TextField(
                         controller: _controller,
-                        enabled: !isLended: !isLendo,
+                        enabled: !isLendo,
                         style: const TextStyle(color: Colors.white),
                         decoration: const InputDecoration(
                           hintText: "Digite mensagem ou comando...",
@@ -508,3 +508,5 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     );
   }
 }
+
+
