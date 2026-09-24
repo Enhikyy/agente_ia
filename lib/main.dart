@@ -1,3 +1,4 @@
+import 'nova_evolution_engine.dart';
 import 'nova_developmental_language.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -242,6 +243,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
   final HemisferioDireitoQuantico cerebroMatriz = HemisferioDireitoQuantico();
   final NovaDevelopmentalLanguage linguagem = NovaDevelopmentalLanguage();
+  final NovaEvolutionEngine evolucao = NovaEvolutionEngine();
   
   late File arquivoMemoria;
   String statusPensamento = "Repouso Quantico";
@@ -275,7 +277,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   Future<void> salvarMemoriaInstantanea() async {
     try {
       final temporario = File('${arquivoMemoria.path}.tmp');
-      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState()}), flush: true);
+      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState()}), flush: true);
       if (await arquivoMemoria.exists()) {
         final anterior = File('${arquivoMemoria.path}.bak');
         await arquivoMemoria.copy(anterior.path);
@@ -295,6 +297,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           final pacote = json.decode(dados);
           final memoriaCore = pacote is Map && pacote.containsKey('core') ? json.encode(pacote['core']) : dados;
           if (pacote is Map && pacote['language'] != null) linguagem.importState(pacote['language']);
+          if (pacote is Map && pacote['evolution'] != null) evolucao.importState(pacote['evolution']);
           if (!cerebroMatriz.restaurarPacoteCriogenico(memoriaCore)) {
             final anterior = File('${arquivoMemoria.path}.bak');
             if (await anterior.exists()) {
@@ -323,6 +326,19 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     if (textoUsuario.trim().isEmpty || isLendo) return;
 
     String comando = textoUsuario.toLowerCase().trim();
+    if (comando == 'evoluir' || comando == 'nova geracao') {
+      final resultado = evolucao.evolve();
+      setState(() {
+        mensagens.add({'texto': textoUsuario, 'isUser': true});
+        mensagens.add({'texto': resultado.accepted
+            ? 'Geracao ${resultado.generation} aprovada. Snapshot: ${resultado.beforeBytes} -> ${resultado.afterBytes} bytes.'
+            : 'Geracao mantida: ${resultado.reason}. Original: ${resultado.beforeBytes} bytes; candidato: ${resultado.afterBytes} bytes.',
+            'isSystem': true});
+        _controller.clear();
+      });
+      await salvarMemoriaInstantanea();
+      return;
+    }
     if (comando == "comprar plugin" || comando == "ir ao shopping") {
       setState(() {
         mensagens.add({"texto": textoUsuario, "isUser": true});
@@ -365,6 +381,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
 
     final resposta = linguagem.answer(textoUsuario);
     linguagem.learnConversation(textoUsuario);
+    evolucao.observe(textoUsuario);
     cerebroMatriz.aprenderComOtimizacao(textoUsuario);
     final resultado = {'resposta': resposta};
 
@@ -408,6 +425,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       String texto = dadosArquivo["texto"];
 
       linguagem.learnDocument(texto, source: resultado.files.single.name);
+      evolucao.observe(texto);
       List<String> frases = texto.split('.');
       for (var frase in frases) {
         cerebroMatriz.aprenderComOtimizacao(frase);
@@ -449,7 +467,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           children: [
             Text("Sinapses: ${cerebroMatriz.sinapses.length}", style: const TextStyle(fontSize: 12, color: Colors.indigoAccent)),
             const SizedBox(width: 8),
-            Text("Geracao: ${linguagem.generation} | Memorias: ${linguagem.memoryCount}", style: const TextStyle(fontSize: 12, color: Colors.white70)),
+            Text("Geracao: ${evolucao.generation} | Conceitos: ${evolucao.concepts}", style: const TextStyle(fontSize: 12, color: Colors.white70)),
           ],
         ),
         actions: [
