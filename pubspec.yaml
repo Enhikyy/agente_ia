@@ -1,5 +1,5 @@
 name: agente_ia
-description: Agente Autoevolutivo Quantico v6.0
+description: Agente Autoevolutivo Quantico
 publish_to: 'none'
 version: 1.0.0+1
 ​environment:
