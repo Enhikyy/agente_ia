@@ -1,3 +1,4 @@
+import 'nova_optimizer.dart';
 import 'nova_web_research.dart';
 import 'nova_pack_installer.dart';
 import 'nova_growth_widgets.dart';
@@ -271,6 +272,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   double get averageResponseMs => responseSamplesMs.isEmpty ? 0 :
     responseSamplesMs.reduce((a, b) => a + b) / responseSamplesMs.length;
   bool researching = false;
+  double retrievalThreshold = 0;
   List<NovaMilestone> milestones = [];
   List<String> pluginsAdquiridos = [];
   List<Map<String, dynamic>> mensagens = [];
@@ -305,7 +307,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     try {
       if (!memoryReady) return;
       final temporario = File('${arquivoMemoria.path}.tmp');
-      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens, 'milestones': milestones.map((e) => e.toJson()).toList(), 'generationReports': generationReports, 'responseSamplesMs': responseSamplesMs, 'evaluationCases': evaluationCases}), flush: true);
+      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens, 'milestones': milestones.map((e) => e.toJson()).toList(), 'generationReports': generationReports, 'responseSamplesMs': responseSamplesMs, 'evaluationCases': evaluationCases, 'retrievalThreshold': retrievalThreshold}), flush: true);
       if (await arquivoMemoria.exists()) {
         final anterior = File('${arquivoMemoria.path}.bak');
         await arquivoMemoria.copy(anterior.path);
@@ -379,19 +381,82 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     if (textoUsuario.trim().isEmpty || isLendo) return;
 
     String comando = textoUsuario.toLowerCase().trim();
+    if (comando.startsWith('avaliar:')) {
+      final parts = textoUsuario.substring(textoUsuario.indexOf(':') + 1).split('|');
+      if (parts.length == 2 && parts.every((p) => p.trim().length >= 2)) {
+        evaluationCases.add({'question': parts[0].trim(), 'expected': parts[1].trim()});
+        if (evaluationCases.length > 100) evaluationCases.removeAt(0);
+        setState(() {
+          mensagens.add({'texto': textoUsuario, 'isUser': true});
+          mensagens.add({'texto': 'Caso de avaliação registrado. Total: ${evaluationCases.length}.', 'isSystem': true});
+          _controller.clear();
+        });
+        await salvarMemoriaInstantanea();
+      } else {
+        setState(() => mensagens.add({'texto': 'Formato: avaliar: pergunta | trecho esperado', 'isSystem': true}));
+      }
+      return;
+    }
     if (comando == 'evoluir' || comando == 'nova geracao') {
-      final resultado = evolucao.evolve();
-      if (resultado.accepted) {
-        _recordMilestone('generation-${resultado.generation}',
-          'Geração ${resultado.generation} aprovada',
-          'Snapshot ${resultado.beforeBytes} → ${resultado.afterBytes} bytes');
+      final beforeConcepts = evolucao.concepts;
+      final beforeConnections = evolucao.connections;
+      final timer = Stopwatch()..start();
+      final tuning = const NovaOptimizer().optimize(
+        cases: evaluationCases.map((c) =>
+          NovaBenchmarkCase(c['question']!, c['expected']!)).toList(),
+        answer: (question, threshold) =>
+          linguagem.answer(question, minScore: threshold),
+        currentThreshold: retrievalThreshold,
+      );
+      if (tuning.accepted) retrievalThreshold = tuning.threshold;
+      final result = evolucao.evolve();
+      timer.stop();
+      final accuracy = evaluationCases.isEmpty ? null :
+        100 * evaluationCases.where((c) =>
+          linguagem.answer(c['question']!, minScore: retrievalThreshold)
+            .toLowerCase().contains(c['expected']!.toLowerCase())).length /
+          evaluationCases.length;
+      final report = <String, dynamic>{
+        'generation': result.generation,
+        'accepted': result.accepted,
+        'at': DateTime.now().toIso8601String(),
+        'durationMs': timer.elapsedMilliseconds,
+        'meanResponseMs': averageResponseMs,
+        'beforeBytes': result.beforeBytes,
+        'afterBytes': result.afterBytes,
+        'compressionPercent': result.beforeBytes == 0 ? 0 :
+          100 * (result.beforeBytes - result.afterBytes) / result.beforeBytes,
+        'conceptDelta': evolucao.concepts - beforeConcepts,
+        'connectionDelta': evolucao.connections - beforeConnections,
+        'accuracyPercent': accuracy,
+        'evaluationCount': evaluationCases.length,
+        'hallucinationEstimatePercent': null,
+        'hallucinationReason': 'Requer verificação independente de afirmações.',
+        'optimizerAccepted': tuning.accepted,
+        'previousThreshold': tuning.previousThreshold,
+        'threshold': retrievalThreshold,
+        'holdoutBefore': tuning.baselineAccuracy,
+        'holdoutAfter': tuning.candidateAccuracy,
+        'optimizerReason': tuning.reason,
+      };
+      generationReports.add(report);
+      if (generationReports.length > 100) generationReports.removeAt(0);
+      if (result.accepted) {
+        _recordMilestone('generation-${result.generation}',
+          'Geração ${result.generation} aprovada',
+          'Snapshot ${result.beforeBytes} → ${result.afterBytes} bytes');
       }
       setState(() {
         mensagens.add({'texto': textoUsuario, 'isUser': true});
-        mensagens.add({'texto': resultado.accepted
-            ? 'Geracao ${resultado.generation} aprovada. Snapshot: ${resultado.beforeBytes} -> ${resultado.afterBytes} bytes.'
-            : 'Geracao mantida: ${resultado.reason}. Original: ${resultado.beforeBytes} bytes; candidato: ${resultado.afterBytes} bytes.',
-            'isSystem': true});
+        mensagens.add({'texto': 'Geração ${result.generation}: ${result.reason}. '
+          'Snapshot ${result.beforeBytes} → ${result.afterBytes} bytes. '
+          'Duração ${timer.elapsedMilliseconds} ms; média de respostas '
+          '${averageResponseMs.toStringAsFixed(1)} ms. '
+          'Acurácia textual: ${accuracy == null ? "não aferida" : "${accuracy.toStringAsFixed(1)}%"} '
+          '(${evaluationCases.length} testes). '
+          'Otimização: ${tuning.reason} '
+          'Limiar ${retrievalThreshold.toStringAsFixed(2)}. '
+          'Alucinação factual: não aferida.', 'isSystem': true});
         _controller.clear();
       });
       await salvarMemoriaInstantanea();
@@ -422,9 +487,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // Yield a frame so the real operation state can be painted.
     await Future<void>.delayed(const Duration(milliseconds: 70));
     final stopwatch = Stopwatch()..start();
-    final resposta = linguagem.answer(textoUsuario);
+    final resposta = linguagem.answer(textoUsuario, minScore: retrievalThreshold);
     stopwatch.stop();
     lastResponseMs = stopwatch.elapsedMilliseconds;
+    responseSamplesMs.add(lastResponseMs);
+    if (responseSamplesMs.length > 100) responseSamplesMs.removeAt(0);
     linguagem.learnConversation(textoUsuario);
     evolucao.observe(textoUsuario);
     cerebroMatriz.aprenderComOtimizacao(textoUsuario);
