@@ -430,11 +430,15 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         }
         await salvarMemoriaInstantanea();
       } on PlatformException catch (error) {
-        if (mounted) setState(() => mensagens.add({'texto':
-          'Não foi possível alterar a autonomia: $error', 'isSystem': true}));
+        if (mounted) {
+          setState(() => mensagens.add({'texto':
+            'Não foi possível alterar a autonomia: $error', 'isSystem': true}));
+        }
       } on MissingPluginException {
-        if (mounted) setState(() => mensagens.add({'texto':
-          'Agendador Android indisponível nesta instalação.', 'isSystem': true}));
+        if (mounted) {
+          setState(() => mensagens.add({'texto':
+            'Agendador Android indisponível nesta instalação.', 'isSystem': true}));
+        }
       }
       return;
     }
