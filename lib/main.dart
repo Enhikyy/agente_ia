@@ -289,6 +289,12 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   NovaUpdate? availableUpdate;
   bool checkingUpdates = false;
   bool autoRefine = false;
+  bool autonomousStudyEnabled = true;
+  int schoolLessonsCompleted = 0;
+  DateTime? lastAutonomousStudy;
+  Timer? studyTicker;
+  static const schoolTopics = <String>['alfabetização', 'aritmética', 'ciências naturais', 'geografia', 'história', 'lógica', 'interpretação de texto', 'matemática'];
+  static const universityTopics = <String>['método científico', 'estatística', 'álgebra linear', 'epistemologia', 'ciência da computação', 'aprendizado de máquina', 'ética em inteligência artificial'];
   NovaAutonomyPolicy autonomyPolicy = const NovaAutonomyPolicy();
 
   Future<void> _checkResources() async {
@@ -337,6 +343,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     arranqueBiologico();
     verificarAtualizacoes(silent: true);
     _checkResources();
+    studyTicker = Timer.periodic(const Duration(hours: 1), (_) => _autonomousStudy());
     resourceTicker = Timer.periodic(const Duration(minutes: 2), (_) {
       if (mounted) _checkResources();
     });
@@ -350,6 +357,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     ageTicker?.cancel();
     resourceTicker?.cancel();
+    studyTicker?.cancel();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -366,7 +374,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     try {
       if (!memoryReady) return;
       final temporario = File('${arquivoMemoria.path}.tmp');
-      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens, 'milestones': milestones.map((e) => e.toJson()).toList(), 'generationReports': generationReports, 'responseSamplesMs': responseSamplesMs, 'evaluationCases': evaluationCases, 'retrievalThreshold': retrievalThreshold, 'backgroundEnabled': backgroundEnabled, 'resourceSamples': resourceSamples, 'autoRefine': autoRefine, 'autonomyPolicy': autonomyPolicy.toJson()}), flush: true);
+      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens, 'milestones': milestones.map((e) => e.toJson()).toList(), 'generationReports': generationReports, 'responseSamplesMs': responseSamplesMs, 'evaluationCases': evaluationCases, 'retrievalThreshold': retrievalThreshold, 'backgroundEnabled': backgroundEnabled, 'resourceSamples': resourceSamples, 'autoRefine': autoRefine, 'autonomyPolicy': autonomyPolicy.toJson(), 'autonomousStudyEnabled': autonomousStudyEnabled, 'schoolLessonsCompleted': schoolLessonsCompleted, 'lastAutonomousStudy': lastAutonomousStudy?.toIso8601String()}), flush: true);
       if (await arquivoMemoria.exists()) {
         final anterior = File('${arquivoMemoria.path}.bak');
         await arquivoMemoria.copy(anterior.path);
@@ -538,6 +546,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             backgroundEnabled = pacote['backgroundEnabled'] == true;
             autoRefine = pacote['autoRefine'] == true;
             autonomyPolicy = NovaAutonomyPolicy.fromJson(pacote['autonomyPolicy']);
+            autonomousStudyEnabled = pacote['autonomousStudyEnabled'] != false;
+            schoolLessonsCompleted = (pacote['schoolLessonsCompleted'] as num?)?.toInt() ?? 0;
+            lastAutonomousStudy = DateTime.tryParse(pacote['lastAutonomousStudy']?.toString() ?? '');
+            Future.delayed(const Duration(minutes: 1), () { if (mounted) _autonomousStudy(); });
             if (pacote['milestones'] is List) {
               milestones = (pacote['milestones'] as List)
                 .map(NovaMilestone.fromJson).whereType<NovaMilestone>()
@@ -606,6 +618,19 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             'Agendador Android indisponível nesta instalação.', 'isSystem': true}));
         }
       }
+      return;
+    }
+    if (comando == 'estudar agora') { await _autonomousStudy(); return; }
+    if (comando == 'estudo autonomo parar' || comando == 'estudo autônomo parar') {
+      autonomousStudyEnabled = false;
+      await salvarMemoriaInstantanea();
+      if (mounted) setState(() => mensagens.add({'texto': 'Estudo autônomo desativado.', 'isSystem': true}));
+      return;
+    }
+    if (comando == 'estudo autonomo iniciar' || comando == 'estudo autônomo iniciar') {
+      autonomousStudyEnabled = true;
+      await salvarMemoriaInstantanea();
+      if (mounted) setState(() => mensagens.add({'texto': 'Estudo autônomo ativado.', 'isSystem': true}));
       return;
     }
     if (comando == 'verificar atualizacoes' || comando == 'verificar atualizações') {
@@ -931,6 +956,43 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       }));
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Estatísticas adicionadas ao chat.')));
+    }
+  }
+
+  Future<void> _autonomousStudy() async {
+    if (!mounted || !memoryReady || !autonomousStudyEnabled || researching ||
+        isLendo || isThinking || !autonomyPolicy.canResearchScheduled) return;
+    final now = DateTime.now();
+    if (lastAutonomousStudy != null &&
+        now.difference(lastAutonomousStudy!) < const Duration(hours: 12)) return;
+    await _checkResources();
+    if (!resourceDecision.mayRunIntensive) return;
+    final topics = schoolLessonsCompleted < 24 ? schoolTopics : universityTopics;
+    final topic = topics[schoolLessonsCompleted % topics.length];
+    lastAutonomousStudy = now;
+    setState(() { researching = true; researchStage = 'Estudando: $topic'; });
+    try {
+      final result = await NovaWebResearch().search(topic);
+      if (!mounted) return;
+      if (result.pages.isEmpty) return;
+      for (final page in result.pages) {
+        linguagem.learnDocument('${page.title}. ${page.extract}', source: page.url);
+        evolucao.observe('${page.title}. ${page.extract}');
+      }
+      schoolLessonsCompleted++;
+      setState(() => mensagens.add({
+        'texto': 'Diário de estudos — ${schoolLessonsCompleted <= 24 ? "Escola" : "Faculdade"}: '
+          '$topic; ${result.pages.length} fontes da Wikipédia. '
+          'Conteúdo registrado, ainda não validado como aprendizado profundo.',
+        'isSystem': true,
+      }));
+    } catch (error) {
+      if (mounted) setState(() => mensagens.add({
+        'texto': 'Estudo autônomo adiado: $error', 'isSystem': true,
+      }));
+    } finally {
+      if (mounted) setState(() { researching = false; });
+      await salvarMemoriaInstantanea();
     }
   }
 
