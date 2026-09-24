@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/services.dart';
 
 enum NovaResourceState { ready, throttled, paused, unavailable }
