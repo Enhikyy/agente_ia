@@ -1,4 +1,5 @@
 import 'nova_diagnostics.dart';
+import 'nova_updates.dart';
 import 'nova_resource_guard.dart';
 import 'nova_optimizer.dart';
 import 'nova_web_research.dart';
@@ -284,6 +285,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   static const _background = MethodChannel('nova/background');
   bool backgroundEnabled = false;
   bool resourceCheckBusy = false;
+  NovaUpdate? availableUpdate;
+  bool checkingUpdates = false;
+  bool autoRefine = false;
 
   Future<void> _checkResources() async {
     if (resourceCheckBusy) return;
@@ -329,6 +333,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     arranqueBiologico();
+    verificarAtualizacoes(silent: true);
     _checkResources();
     resourceTicker = Timer.periodic(const Duration(minutes: 2), (_) {
       if (mounted) _checkResources();
@@ -359,13 +364,80 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     try {
       if (!memoryReady) return;
       final temporario = File('${arquivoMemoria.path}.tmp');
-      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens, 'milestones': milestones.map((e) => e.toJson()).toList(), 'generationReports': generationReports, 'responseSamplesMs': responseSamplesMs, 'evaluationCases': evaluationCases, 'retrievalThreshold': retrievalThreshold, 'backgroundEnabled': backgroundEnabled, 'resourceSamples': resourceSamples}), flush: true);
+      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens, 'milestones': milestones.map((e) => e.toJson()).toList(), 'generationReports': generationReports, 'responseSamplesMs': responseSamplesMs, 'evaluationCases': evaluationCases, 'retrievalThreshold': retrievalThreshold, 'backgroundEnabled': backgroundEnabled, 'resourceSamples': resourceSamples, 'autoRefine': autoRefine}), flush: true);
       if (await arquivoMemoria.exists()) {
         final anterior = File('${arquivoMemoria.path}.bak');
         await arquivoMemoria.copy(anterior.path);
       }
       await temporario.rename(arquivoMemoria.path);
     } catch (_) {}
+  }
+
+  Future<void> verificarAtualizacoes({bool silent = false}) async {
+    if (checkingUpdates) return;
+    if (mounted) setState(() { checkingUpdates = true; });
+    try {
+      final update = await const NovaUpdates().check();
+      if (!mounted) return;
+      setState(() { availableUpdate = update; });
+      if (!silent) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
+          update == null ? 'NOVA atualizada ou nenhuma versão válida encontrada.' :
+          'Atualização disponível: build ${update.build}.')));
+      }
+    } catch (error) {
+      if (!silent && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Não foi possível consultar o GitHub: $error')));
+      }
+    } finally {
+      if (mounted) setState(() { checkingUpdates = false; });
+    }
+  }
+
+  Future<void> atualizarNova() async {
+    final update = availableUpdate;
+    if (update == null) return;
+    // Flush the complete snapshot before Android opens the APK download.
+    await salvarMemoriaInstantanea();
+    try {
+      await const MethodChannel('nova/updates')
+          .invokeMethod<void>('open', {'url': update.url.toString()});
+    } on PlatformException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Falha ao abrir atualização: $error')));
+    }
+  }
+
+  Future<void> refinarParametros() async {
+    if (evaluationCases.length < 10) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Registre pelo menos 10 testes antes de refinar.')));
+      return;
+    }
+    final before = retrievalThreshold;
+    final result = const NovaOptimizer().optimize(
+      cases: evaluationCases.map((c) =>
+        NovaBenchmarkCase(c['question']!, c['expected']!)).toList(),
+      answer: (question, threshold) =>
+        linguagem.answer(question, minScore: threshold),
+      currentThreshold: before,
+    );
+    if (result.accepted) retrievalThreshold = result.threshold;
+    generationReports.add({
+      'at': DateTime.now().toUtc().toIso8601String(),
+      'generation': evolucao.generation,
+      'optimizerAccepted': result.accepted,
+      'previousThreshold': before,
+      'threshold': retrievalThreshold,
+      'holdoutBefore': result.baselineAccuracy,
+      'holdoutAfter': result.candidateAccuracy,
+      'evaluationCount': evaluationCases.length,
+    });
+    if (generationReports.length > 100) generationReports.removeAt(0);
+    await salvarMemoriaInstantanea();
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(result.reason)));
   }
 
   Future<void> exportarDiagnostico() async {
@@ -441,6 +513,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
               retrievalThreshold = (pacote['retrievalThreshold'] as num).toDouble();
             }
             backgroundEnabled = pacote['backgroundEnabled'] == true;
+            autoRefine = pacote['autoRefine'] == true;
             if (pacote['milestones'] is List) {
               milestones = (pacote['milestones'] as List)
                 .map(NovaMilestone.fromJson).whereType<NovaMilestone>()
@@ -509,6 +582,14 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             'Agendador Android indisponível nesta instalação.', 'isSystem': true}));
         }
       }
+      return;
+    }
+    if (comando == 'verificar atualizacoes' || comando == 'verificar atualizações') {
+      await verificarAtualizacoes();
+      return;
+    }
+    if (comando == 'refinar parametros' || comando == 'refinar parâmetros') {
+      await refinarParametros();
       return;
     }
     if (comando == 'exportar diagnostico' || comando == 'exportar diagnóstico') {
@@ -896,6 +977,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       onImport: lerBaseDeDados,
       onBackup: gerarBackupCriogenico,
       onDiagnostics: exportarDiagnostico,
+      onCheckUpdates: () => verificarAtualizacoes(),
+      onUpdate: atualizarNova,
+      availableUpdateBuild: availableUpdate?.build,
+      checkingUpdates: checkingUpdates,
+      onRefine: refinarParametros,
       onEvolve: () => processarEntrada('evoluir'),
       onAppearance: () {
         setState(() {});
