@@ -1,3 +1,4 @@
+import 'nova_growth_widgets.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
@@ -63,7 +64,8 @@ class NovaDashboard extends StatefulWidget {
     required this.messages, required this.input, required this.scroll,
     required this.onSend, required this.onImport, required this.onBackup,
     required this.onEvolve, required this.onAppearance, required this.isReading,
-    required this.plugins, required this.onPlugin, required this.onResearch});
+    required this.plugins, required this.onPlugin, required this.onResearch,
+    required this.isThinking, required this.milestones});
   final NovaAppearance appearance;
   final int generation, concepts, experiences, responseMs;
   final Duration age;
@@ -73,7 +75,8 @@ class NovaDashboard extends StatefulWidget {
   final ScrollController scroll;
   final ValueChanged<String> onSend;
   final VoidCallback onImport, onBackup, onEvolve, onAppearance, onResearch;
-  final bool isReading;
+  final bool isReading, isThinking;
+  final List<NovaMilestone> milestones;
   final List<String> plugins;
   final ValueChanged<String> onPlugin;
 
@@ -138,7 +141,8 @@ class _NovaDashboardState extends State<NovaDashboard> {
               icon: const Icon(Icons.save_alt_rounded)),
           ]),
         body: SafeArea(child: IndexedStack(index: page, children: [
-          _home(accent), _chat(accent), _plugins(accent), _settings(accent),
+          _home(accent), _chat(accent), _growth(accent),
+          _plugins(accent), _settings(accent),
         ])),
         bottomNavigationBar: NavigationBar(
           backgroundColor: const Color(0xFF101626),
@@ -149,6 +153,8 @@ class _NovaDashboardState extends State<NovaDashboard> {
               selectedIcon: Icon(Icons.space_dashboard_rounded), label: 'Painel'),
             NavigationDestination(icon: Icon(Icons.chat_bubble_outline),
               selectedIcon: Icon(Icons.chat_bubble_rounded), label: 'Chat'),
+            NavigationDestination(icon: Icon(Icons.account_tree_outlined),
+              selectedIcon: Icon(Icons.account_tree_rounded), label: 'Evolução'),
             NavigationDestination(icon: Icon(Icons.extension_outlined),
               selectedIcon: Icon(Icons.extension_rounded), label: 'Plugins'),
             NavigationDestination(icon: Icon(Icons.tune_rounded),
@@ -213,6 +219,11 @@ class _NovaDashboardState extends State<NovaDashboard> {
         ],
       ])),
       const SizedBox(height: 12),
+      panel(NovaGrowthTimeline(events: widget.milestones.reversed.take(3).toList(),
+        age: widget.age, generation: widget.generation,
+        concepts: widget.concepts, experiences: widget.experiences,
+        color: accent)),
+      const SizedBox(height: 12),
       FilledButton.icon(onPressed: widget.onEvolve,
         icon: const Icon(Icons.auto_awesome_rounded),
         label: const Text('Testar nova geração')),
@@ -256,6 +267,11 @@ class _NovaDashboardState extends State<NovaDashboard> {
                   style: const TextStyle(fontSize: 14, height: 1.5)),
               ])));
       })),
+    if (widget.isThinking || widget.isReading)
+      Padding(padding: const EdgeInsets.fromLTRB(17, 6, 17, 6),
+        child: Align(alignment: Alignment.centerLeft,
+          child: panel(NovaTypingIndicator(color: accent,
+            label: widget.isReading ? 'NOVA está lendo' : 'NOVA está pensando')))),
     if (widget.isReading) LinearProgressIndicator(color: accent),
     Padding(padding: const EdgeInsets.all(12),
       child: Row(children: [
@@ -273,6 +289,23 @@ class _NovaDashboardState extends State<NovaDashboard> {
           icon: const Icon(Icons.arrow_upward_rounded)),
       ])),
   ]);
+
+  Widget _growth(Color accent) => ListView(
+    padding: const EdgeInsets.all(18), children: [
+      const Text('Evolução', style: TextStyle(
+        fontSize: 25, fontWeight: FontWeight.w700)),
+      const SizedBox(height: 8),
+      const Text('Histórico verificável de atividades e gerações.',
+        style: TextStyle(color: subtle)),
+      const SizedBox(height: 18),
+      panel(NovaGrowthTimeline(events: widget.milestones,
+        age: widget.age, generation: widget.generation,
+        concepts: widget.concepts, experiences: widget.experiences,
+        color: accent)),
+      const SizedBox(height: 14),
+      panel(NovaGenerationTree(events: widget.milestones,
+        currentGeneration: widget.generation, color: accent)),
+    ]);
 
   Widget _plugins(Color accent) => ListView(
     padding: const EdgeInsets.all(18), children: [
