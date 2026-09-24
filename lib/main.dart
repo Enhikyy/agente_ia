@@ -525,20 +525,28 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         'Pacote instalado', pack.name);
       if (!mounted) return;
       setState(() {
-        if (!pluginsAdquiridos.contains(pack.name)) pluginsAdquiridos.add(pack.name);
+        if (!pluginsAdquiridos.contains(pack.name)) {
+          pluginsAdquiridos.add(pack.name);
+        }
         mensagens.add({'texto': 'Pacote ${pack.name} instalado: '
           '${pack.documents.length} documentos importados.', 'isSystem': true});
       });
       await salvarMemoriaInstantanea();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${pack.name} instalado com sucesso')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${pack.name} instalado com sucesso')));
+      }
     } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Instalação recusada: $error')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Instalação recusada: $error')));
+      }
     } finally {
-      if (mounted) setState(() {
-        installingPack = false; statusPensamento = 'Em repouso';
-      });
+      if (mounted) {
+        setState(() {
+          installingPack = false; statusPensamento = 'Em repouso';
+        });
+      }
     }
   }
 
