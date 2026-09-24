@@ -252,6 +252,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   DateTime createdAt = DateTime.now();
   int lastResponseMs = 0;
   bool memoryReady = false;
+  Timer? ageTicker;
   String statusPensamento = "Repouso Quantico";
   bool isCarregando = true;
   bool isLendo = false;
