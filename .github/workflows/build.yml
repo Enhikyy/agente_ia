@@ -3,6 +3,8 @@ name: Build APK
 on:
   push:
     branches: [ main, 'feature/**' ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -39,6 +41,9 @@ jobs:
 
       - name: Get Dependencies
         run: flutter pub get
+
+      - name: Flutter analyze
+        run: flutter analyze
 
       - name: Run Flutter tests
         run: flutter test
