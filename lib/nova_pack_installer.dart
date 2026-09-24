@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 
 /// Data-only offline add-on. No remote Dart, APK, shell or dynamic code execution.
