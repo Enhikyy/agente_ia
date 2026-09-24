@@ -2,20 +2,13 @@ name: agente_ia
 description: Agente Autoevolutivo Quantico Definitivo v6.0
 publish_to: 'none'
 version: 1.0.0+1
-
-environment:
-  sdk: '>=3.2.3 <4.0.0'
-
-dependencies:
-  flutter:
-    sdk: flutter
-  path_provider: ^2.1.2
-  file_picker: ^8.0.0
-  syncfusion_flutter_pdf: ^24.2.3
-
+​environment:
+sdk: '>=3.2.3 <4.0.0'
+​dependencies:
 flutter:
-  uses-material-design: true
-  fonts:
-    - family: Poppins
-      fonts:
-        - asset: assets/fonts/Poppins-Regular.ttf
+sdk: flutter
+path_provider: ^2.1.2
+file_picker: ^8.0.0
+syncfusion_flutter_pdf: ^24.2.3
+​flutter:
+uses-material-design: true
