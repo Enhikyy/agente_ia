@@ -1,3 +1,4 @@
+import 'nova_resource_guard.dart';
 import 'nova_optimizer.dart';
 import 'nova_web_research.dart';
 import 'nova_pack_installer.dart';
@@ -273,6 +274,33 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     responseSamplesMs.reduce((a, b) => a + b) / responseSamplesMs.length;
   bool researching = false;
   double retrievalThreshold = 0;
+  final NovaResourceGuard resourceGuard = const NovaResourceGuard();
+  NovaResourceDecision resourceDecision = const NovaResourceDecision(
+    NovaResourceState.unavailable, 'Aguardando leitura dos sensores.');
+  Timer? resourceTicker;
+  bool resourceCheckBusy = false;
+
+  Future<void> _checkResources() async {
+    if (resourceCheckBusy) return;
+    resourceCheckBusy = true;
+    try {
+      final decision = await resourceGuard.check();
+      if (mounted) setState(() { resourceDecision = decision; });
+    } finally {
+      resourceCheckBusy = false;
+    }
+  }
+
+  Future<bool> _authorizeIntensiveTask() async {
+    await _checkResources();
+    if (resourceDecision.mayRunIntensive) return true;
+    if (mounted) {
+      setState(() => mensagens.add({'texto':
+        'Modo intensivo suspenso: ${resourceDecision.reason}',
+        'isSystem': true}));
+    }
+    return false;
+  }
   List<NovaMilestone> milestones = [];
   List<String> pluginsAdquiridos = [];
   List<Map<String, dynamic>> mensagens = [];
@@ -282,6 +310,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     arranqueBiologico();
+    _checkResources();
+    resourceTicker = Timer.periodic(const Duration(minutes: 2), (_) {
+      if (mounted) _checkResources();
+    });
     ageTicker = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted && !isCarregando) setState(() {});
     });
@@ -291,6 +323,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     ageTicker?.cancel();
+    resourceTicker?.cancel();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -381,6 +414,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     if (textoUsuario.trim().isEmpty || isLendo) return;
 
     String comando = textoUsuario.toLowerCase().trim();
+    if (comando == 'recursos' || comando == 'autonomia') {
+      await _checkResources();
+      if (mounted) setState(() => mensagens.add({'texto':
+        'Modo intensivo: ${resourceDecision.state.name}. ${resourceDecision.reason}',
+        'isSystem': true}));
+      return;
+    }
     if (comando.startsWith('avaliar:')) {
       final parts = textoUsuario.substring(textoUsuario.indexOf(':') + 1).split('|');
       if (parts.length == 2 && parts.every((p) => p.trim().length >= 2)) {
@@ -398,6 +438,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       return;
     }
     if (comando == 'evoluir' || comando == 'nova geracao') {
+      if (!await _authorizeIntensiveTask()) return;
       final beforeConcepts = evolucao.concepts;
       final beforeConnections = evolucao.connections;
       final timer = Stopwatch()..start();
@@ -697,6 +738,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             child: const Text('Pesquisar'))]));
     input.dispose();
     if (term == null || term.trim().length < 2 || researching) return;
+    if (!await _authorizeIntensiveTask()) return;
     setState(() { researching = true; researchProgress = 0;
       researchStage = 'Iniciando pesquisa'; statusPensamento = researchStage; });
     final timer = Stopwatch()..start();
