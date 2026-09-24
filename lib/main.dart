@@ -265,6 +265,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   double researchProgress = 0;
   String researchStage = "";
   int lastResearchMs = 0;
+  final List<Map<String, dynamic>> generationReports = [];
+  final List<int> responseSamplesMs = [];
+  double get averageResponseMs => responseSamplesMs.isEmpty ? 0 :
+    responseSamplesMs.reduce((a, b) => a + b) / responseSamplesMs.length;
   bool researching = false;
   List<NovaMilestone> milestones = [];
   List<String> pluginsAdquiridos = [];
@@ -300,7 +304,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     try {
       if (!memoryReady) return;
       final temporario = File('${arquivoMemoria.path}.tmp');
-      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens, 'milestones': milestones.map((e) => e.toJson()).toList()}), flush: true);
+      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens, 'milestones': milestones.map((e) => e.toJson()).toList(), 'generationReports': generationReports, 'responseSamplesMs': responseSamplesMs}), flush: true);
       if (await arquivoMemoria.exists()) {
         final anterior = File('${arquivoMemoria.path}.bak');
         await arquivoMemoria.copy(anterior.path);
