@@ -1,3 +1,4 @@
+import 'nova_growth_widgets.dart';
 import 'dart:async';
 import 'nova_dashboard.dart';
 import 'nova_evolution_engine.dart';
@@ -256,6 +257,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   String statusPensamento = "Repouso Quantico";
   bool isCarregando = true;
   bool isLendo = false;
+  bool isThinking = false;
+  List<NovaMilestone> milestones = [];
   List<String> pluginsAdquiridos = [];
   List<Map<String, dynamic>> mensagens = [];
 
@@ -289,7 +292,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     try {
       if (!memoryReady) return;
       final temporario = File('${arquivoMemoria.path}.tmp');
-      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens}), flush: true);
+      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens, 'milestones': milestones.map((e) => e.toJson()).toList()}), flush: true);
       if (await arquivoMemoria.exists()) {
         final anterior = File('${arquivoMemoria.path}.bak');
         await arquivoMemoria.copy(anterior.path);
@@ -315,6 +318,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             appearance.restore(pacote['appearance']);
             final savedDate = DateTime.tryParse(pacote['createdAt']?.toString() ?? '');
             if (savedDate != null && !savedDate.isAfter(DateTime.now())) createdAt = savedDate;
+            if (pacote['milestones'] is List) {
+              milestones = (pacote['milestones'] as List)
+                .map(NovaMilestone.fromJson).whereType<NovaMilestone>()
+                .take(300).toList();
+            }
             if (pacote['messages'] is List) {
               mensagens = (pacote['messages'] as List).whereType<Map>()
                 .map((m) => Map<String, dynamic>.from(m)).take(500).toList();
@@ -335,6 +343,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       cerebroMatriz.aprenderComOtimizacao("A fisica quantica e a teoria da informacao explicam a entropia.");
     }
 
+    if (milestones.isEmpty) {
+      milestones.add(NovaMilestone(id: 'genesis', at: createdAt,
+        title: 'Gênese da NOVA', description: 'Primeira inicialização registrada',
+        generation: 0, concepts: 0));
+    }
     setState(() {
       isCarregando = false;
       if (mensagens.isEmpty) {
@@ -352,6 +365,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     String comando = textoUsuario.toLowerCase().trim();
     if (comando == 'evoluir' || comando == 'nova geracao') {
       final resultado = evolucao.evolve();
+      if (resultado.accepted) {
+        _recordMilestone('generation-${resultado.generation}',
+          'Geração ${resultado.generation} aprovada',
+          'Snapshot ${resultado.beforeBytes} → ${resultado.afterBytes} bytes');
+      }
       setState(() {
         mensagens.add({'texto': textoUsuario, 'isUser': true});
         mensagens.add({'texto': resultado.accepted
@@ -382,8 +400,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       _controller.clear();
       rolarParaFinal();
       statusPensamento = "Processando...";
+      isThinking = true;
     });
 
+    // Yield a frame so the real operation state can be painted.
+    await Future<void>.delayed(const Duration(milliseconds: 70));
     final stopwatch = Stopwatch()..start();
     final resposta = linguagem.answer(textoUsuario);
     stopwatch.stop();
@@ -394,12 +415,26 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     final resultado = {'resposta': resposta};
 
     setState(() {
-      statusPensamento = "Repouso Quantico";
+      statusPensamento = "Em repouso";
+      isThinking = false;
       mensagens.add({"texto": resultado["resposta"], "isUser": false});
       rolarParaFinal();
     });
 
+    if (evolucao.experiences > 0 && evolucao.experiences % 25 == 0) {
+      _recordMilestone('experience-${evolucao.experiences}',
+        '${evolucao.experiences} experiências',
+        'Marco de atividade: ${evolucao.concepts} conceitos registrados');
+    }
     await salvarMemoriaInstantanea();
+  }
+
+  void _recordMilestone(String id, String title, String description) {
+    if (milestones.any((event) => event.id == id)) return;
+    milestones.add(NovaMilestone(id: id, at: DateTime.now(),
+      title: title, description: description,
+      generation: evolucao.generation, concepts: evolucao.concepts));
+    if (milestones.length > 300) milestones.removeAt(1);
   }
 
   Future<void> gerarBackupCriogenico() async {
@@ -436,6 +471,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
 
       linguagem.learnDocument(texto, source: resultado.files.single.name);
       evolucao.observe(texto);
+      _recordMilestone('document-${DateTime.now().microsecondsSinceEpoch}',
+        'Documento importado', resultado.files.single.name);
       List<String> frases = texto.split('.');
       for (var frase in frases) {
         cerebroMatriz.aprenderComOtimizacao(frase);
@@ -517,6 +554,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       },
       onResearch: _researchStatus,
       isReading: isLendo,
+      isThinking: isThinking,
+      milestones: milestones,
       plugins: pluginsAdquiridos,
       onPlugin: _pluginAction,
     );
