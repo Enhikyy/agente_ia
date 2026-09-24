@@ -172,7 +172,7 @@ class NovaGrowthTimeline extends StatelessWidget {
                   '${event.concepts} conceitos',
                   style: TextStyle(color: color, fontSize: 10)),
               ])),
-          )),
+          ),
         ]));
 }
 
