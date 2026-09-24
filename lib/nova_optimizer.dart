@@ -1,5 +1,3 @@
-import 'dart:math';
-
 /// Evaluates data-only retrieval configurations. Never executes downloaded
 /// code, modifies APK files or elevates Android permissions.
 class NovaOptimizer {
