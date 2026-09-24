@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math';
 
 /// Private data format; never executable code and never network replication.
 class NovaGenome {
