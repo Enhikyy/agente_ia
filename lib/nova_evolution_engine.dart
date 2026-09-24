@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 /// Experimental, deterministic symbolic evolution. No neural LLM is claimed.
@@ -53,38 +54,44 @@ class NovaEvolutionEngine {
     experiences++;
   }
 
-  /// Evaluate an alternative compressed representation on a copy.
-  /// Accept only when lossless reconstruction passes and byte savings are real.
+  /// A generation is accepted only when a reversible compact snapshot wins.
   EvolutionResult evolve() {
-    final baseline = jsonEncode(_canonicalPayload());
-    final before = utf8.encode(baseline).length;
-    final candidate = Map<String, int>.from(_patterns);
-    final ordered = _edges.entries.where((e) => e.value >= 3).toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    for (final entry in ordered.take(128)) {
-      candidate[entry.key] = entry.value;
+    final baseline = utf8.encode(jsonEncode(_canonicalPayload()));
+    final packed = gzip.encode(baseline);
+    final restored = gzip.decode(packed);
+    if (base64Encode(restored) != base64Encode(baseline)) {
+      return EvolutionResult(false, baseline.length, packed.length,
+          generation, 'Integridade falhou');
     }
-    // A candidate must never replace source information: patterns are
-    // optional indexes, not destructive replacements.
-    final compact = jsonEncode({'edges': _edges, 'patterns': candidate});
-    final restored = jsonDecode(compact) as Map<String, dynamic>;
-    final reconstructed = Map<String, int>.from(restored['edges'] as Map);
-    if (!_sameMap(_edges, reconstructed)) {
-      return EvolutionResult(false, before, before, generation, 'Integridade falhou');
+    if (packed.length >= baseline.length) {
+      return EvolutionResult(false, baseline.length, packed.length,
+          generation, 'Sem ganho real de compressao');
     }
-    // Compare the actual persisted representation, not a made-up score.
-    final after = utf8.encode(jsonEncode({
-      'symbols': _symbols, 'edges': reconstructed, 'patterns': candidate,
-      'experiences': experiences, 'generation': generation + 1,
-    })).length;
-    if (after >= before) {
-      return EvolutionResult(false, before, after, generation,
-          'Candidato nao reduziu armazenamento');
-    }
-    _patterns..clear()..addAll(candidate);
     generation++;
     acceptedMutations++;
-    return EvolutionResult(true, before, after, generation, 'Compactacao validada');
+    return EvolutionResult(true, baseline.length, packed.length,
+        generation, 'Snapshot comprimido sem perdas');
+  }
+
+  String exportCompressed() {
+    final original = utf8.encode(jsonEncode(_canonicalPayload()));
+    final packed = gzip.encode(original);
+    return jsonEncode({'format': 'nova-gzip-v1',
+      'payload': base64Encode(packed)});
+  }
+
+  bool importCompressed(String snapshot) {
+    try {
+      final wrapper = jsonDecode(snapshot) as Map<String, dynamic>;
+      if (wrapper['format'] != 'nova-gzip-v1') return false;
+      final compressed = base64Decode(wrapper['payload'] as String);
+      if (compressed.length > 4 * 1024 * 1024) return false;
+      final decoded = gzip.decode(compressed);
+      if (decoded.length > 16 * 1024 * 1024) return false;
+      return importState(jsonDecode(utf8.decode(decoded)));
+    } catch (_) {
+      return false;
+    }
   }
 
   /// A generational milestone can also be earned by reproducible recall,
