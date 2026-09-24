@@ -6,6 +6,20 @@ class NovaDevelopmentalLanguage {
   int generation = 0;
   int experiences = 0;
   final List<_Memory> _memories = [];
+  final Map<String, Set<int>> _index = {};
+  void _indexMemory(_Memory memory) {
+    final id = _memories.length;
+    _memories.add(memory);
+    for (final token in _tokens(memory.text).toSet()) {
+      _index.putIfAbsent(token, () => <int>{}).add(id);
+    }
+  }
+  void _rebuildIndex() {
+    final old = List<_Memory>.from(_memories);
+    _memories.clear();
+    _index.clear();
+    for (final memory in old) { _indexMemory(memory); }
+  }
   static const _stop = <String>{
     'a','as','o','os','um','uma','de','do','da','dos','das','e','em',
     'no','na','nos','nas','para','por','que','qual','quais','me','voce',
@@ -31,7 +45,7 @@ class NovaDevelopmentalLanguage {
       if (_memories.length >= 1500) break;
       final normalized = chunk.length > 750 ? chunk.substring(0, 750) : chunk;
       if (_memories.any((m) => m.text == normalized)) continue;
-      _memories.add(_Memory(normalized, source));
+      _indexMemory(_Memory(normalized, source));
     }
     experiences++;
     generation = experiences ~/ 25;
@@ -40,7 +54,7 @@ class NovaDevelopmentalLanguage {
   void learnConversation(String text) {
     if (text.trim().length < 18) return;
     if (_memories.length < 1500) {
-      _memories.add(_Memory(text.trim(), 'conversa'));
+      _indexMemory(_Memory(text.trim(), 'conversa'));
     }
     experiences++;
     generation = experiences ~/ 25;
@@ -64,6 +78,7 @@ class NovaDevelopmentalLanguage {
       final count = raw['experiences'];
       if (count is! int || count < 0) return false;
       _memories..clear()..addAll(entries);
+      _rebuildIndex();
       experiences = count;
       generation = experiences ~/ 25;
       return true;
@@ -80,12 +95,16 @@ class NovaDevelopmentalLanguage {
     if (wantsSummary && documentMemories.isEmpty) {
       return 'Ainda nao tenho um documento para resumir. Importe um PDF ou TXT primeiro.';
     }
-    final candidates = wantsSummary ? documentMemories : _memories;
     final query = _tokens(question).toSet();
+    final ids = <int>{};
+    for (final token in query) { ids.addAll(_index[token] ?? const <int>{}); }
+    final candidates = wantsSummary ? documentMemories :
+      ids.map((id) => _memories[id]).toList();
     final ranked = candidates.map((m) {
       final words = _tokens(m.text).toSet();
       final overlap = query.intersection(words).length;
-      final score = overlap / sqrt(max(words.length, 1));
+      final sourceWeight = m.source == 'conversa' ? 1.4 : 1.0;
+      final score = sourceWeight * overlap / sqrt(max(words.length, 1));
       return (memory: m, score: score);
     }).toList()..sort((a,b) => b.score.compareTo(a.score));
     if (wantsSummary) {
