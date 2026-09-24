@@ -1,3 +1,4 @@
+import 'nova_pack_installer.dart';
 import 'nova_growth_widgets.dart';
 import 'dart:async';
 import 'nova_dashboard.dart';
@@ -249,6 +250,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   final NovaEvolutionEngine evolucao = NovaEvolutionEngine();
   
   late File arquivoMemoria;
+  late NovaPackInstaller packInstaller;
+  bool installingPack = false;
   final NovaAppearance appearance = NovaAppearance();
   DateTime createdAt = DateTime.now();
   int lastResponseMs = 0;
@@ -304,6 +307,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   Future<void> arranqueBiologico() async {
     final dir = await getApplicationDocumentsDirectory();
     arquivoMemoria = File('${dir.path}/matriz_neural_quantica_v6.json');
+    packInstaller = NovaPackInstaller(Directory('${dir.path}/nova_packs'));
+    pluginsAdquiridos = (await packInstaller.installed())
+        .map((pack) => pack.name).toList();
     memoryReady = true;
 
     if (await arquivoMemoria.exists()) {
@@ -506,6 +512,78 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     });
   }
 
+  Future<void> _installPack(Future<NovaPack> Function() install) async {
+    if (installingPack || isLendo || isThinking) return;
+    setState(() { installingPack = true; statusPensamento = 'Instalando pacote...'; });
+    try {
+      final pack = await install();
+      for (final document in pack.documents) {
+        linguagem.learnDocument(document, source: pack.name);
+        evolucao.observe(document);
+      }
+      _recordMilestone('pack-${pack.id}-${DateTime.now().microsecondsSinceEpoch}',
+        'Pacote instalado', pack.name);
+      if (!mounted) return;
+      setState(() {
+        if (!pluginsAdquiridos.contains(pack.name)) pluginsAdquiridos.add(pack.name);
+        mensagens.add({'texto': 'Pacote ${pack.name} instalado: '
+          '${pack.documents.length} documentos importados.', 'isSystem': true});
+      });
+      await salvarMemoriaInstantanea();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${pack.name} instalado com sucesso')));
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Instalação recusada: $error')));
+    } finally {
+      if (mounted) setState(() {
+        installingPack = false; statusPensamento = 'Em repouso';
+      });
+    }
+  }
+
+  Future<void> _installLocalPack() async {
+    final selected = await FilePicker.platform.pickFiles(
+      type: FileType.custom, allowedExtensions: ['json']);
+    final path = selected?.files.single.path;
+    if (path == null) return;
+    await _installPack(() => packInstaller.installLocal(File(path)));
+  }
+
+  Future<void> _installUrlPack() async {
+    final url = TextEditingController();
+    final checksum = TextEditingController();
+    try {
+      final approved = await showDialog<bool>(context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Instalar pacote HTTPS'),
+          content: SingleChildScrollView(child: Column(
+            mainAxisSize: MainAxisSize.min, children: [
+              const Text('Informe o endereço HTTPS do pacote e o SHA-256 '
+                'publicado pelo fornecedor. Limite: 32 MB. '
+                'Somente documentos JSON são aceitos.'),
+              const SizedBox(height: 12),
+              TextField(controller: url,
+                decoration: const InputDecoration(labelText: 'URL HTTPS')),
+              const SizedBox(height: 10),
+              TextField(controller: checksum,
+                decoration: const InputDecoration(labelText: 'SHA-256 (64 caracteres)')),
+            ])),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancelar')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Verificar e instalar')),
+          ]));
+      if (approved != true || !mounted) return;
+      final link = url.text.trim(), hash = checksum.text.trim();
+      await _installPack(() => packInstaller.installHttps(link, hash));
+    } finally {
+      url.dispose();
+      checksum.dispose();
+    }
+  }
+
   void _pluginAction(String id) {
     if (id == 'compression') {
       processarEntrada('evoluir');
@@ -558,6 +636,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       milestones: milestones,
       plugins: pluginsAdquiridos,
       onPlugin: _pluginAction,
+      onInstallLocal: _installLocalPack,
+      onInstallUrl: _installUrlPack,
     );
   }
 }
