@@ -12,6 +12,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
@@ -278,6 +279,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   NovaResourceDecision resourceDecision = const NovaResourceDecision(
     NovaResourceState.unavailable, 'Aguardando leitura dos sensores.');
   Timer? resourceTicker;
+  static const _background = MethodChannel('nova/background');
+  bool backgroundEnabled = false;
   bool resourceCheckBusy = false;
 
   Future<void> _checkResources() async {
@@ -340,7 +343,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     try {
       if (!memoryReady) return;
       final temporario = File('${arquivoMemoria.path}.tmp');
-      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens, 'milestones': milestones.map((e) => e.toJson()).toList(), 'generationReports': generationReports, 'responseSamplesMs': responseSamplesMs, 'evaluationCases': evaluationCases, 'retrievalThreshold': retrievalThreshold}), flush: true);
+      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens, 'milestones': milestones.map((e) => e.toJson()).toList(), 'generationReports': generationReports, 'responseSamplesMs': responseSamplesMs, 'evaluationCases': evaluationCases, 'retrievalThreshold': retrievalThreshold, 'backgroundEnabled': backgroundEnabled}), flush: true);
       if (await arquivoMemoria.exists()) {
         final anterior = File('${arquivoMemoria.path}.bak');
         await arquivoMemoria.copy(anterior.path);
@@ -414,6 +417,27 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     if (textoUsuario.trim().isEmpty || isLendo) return;
 
     String comando = textoUsuario.toLowerCase().trim();
+    if (comando == 'autonomia iniciar' || comando == 'autonomia parar') {
+      final enable = comando == 'autonomia iniciar';
+      try {
+        await _background.invokeMethod<bool>(enable ? 'start' : 'stop');
+        backgroundEnabled = enable;
+        if (mounted) {
+          setState(() => mensagens.add({'texto': enable
+            ? 'Monitoramento periódico ativado: a cada 15 minutos ou conforme o Android permitir. '
+              'Verifica somente a pasta privada nova_inbox e não mantém o aplicativo permanentemente acordado.'
+            : 'Monitoramento periódico desativado.', 'isSystem': true}));
+        }
+        await salvarMemoriaInstantanea();
+      } on PlatformException catch (error) {
+        if (mounted) setState(() => mensagens.add({'texto':
+          'Não foi possível alterar a autonomia: $error', 'isSystem': true}));
+      } on MissingPluginException {
+        if (mounted) setState(() => mensagens.add({'texto':
+          'Agendador Android indisponível nesta instalação.', 'isSystem': true}));
+      }
+      return;
+    }
     if (comando == 'recursos' || comando == 'autonomia') {
       await _checkResources();
       if (mounted) {
