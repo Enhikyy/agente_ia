@@ -14,6 +14,18 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "nova/background")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "start" -> { NovaBackgroundWorker.schedule(this); result.success(true) }
+                    "stop" -> { NovaBackgroundWorker.cancel(this); result.success(true) }
+                    "pending" -> {
+                        val file = java.io.File(filesDir, "nova_pending_scan.txt")
+                        result.success(if (file.exists()) file.readLines().take(100) else emptyList<String>())
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "nova/device_resources")
             .setMethodCallHandler { call, result ->
                 if (call.method != "read") {
