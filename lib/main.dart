@@ -416,9 +416,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     String comando = textoUsuario.toLowerCase().trim();
     if (comando == 'recursos' || comando == 'autonomia') {
       await _checkResources();
-      if (mounted) setState(() => mensagens.add({'texto':
-        'Modo intensivo: ${resourceDecision.state.name}. ${resourceDecision.reason}',
-        'isSystem': true}));
+      if (mounted) {
+        setState(() => mensagens.add({'texto':
+          'Modo intensivo: ${resourceDecision.state.name}. ${resourceDecision.reason}',
+          'isSystem': true}));
+      }
       return;
     }
     if (comando.startsWith('avaliar:')) {
