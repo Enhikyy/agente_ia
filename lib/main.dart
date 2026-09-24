@@ -634,13 +634,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     if (comando == 'estudo autonomo parar' || comando == 'estudo autônomo parar') {
       autonomousStudyEnabled = false;
       await salvarMemoriaInstantanea();
-      if (mounted) { setState(() => mensagens.add({'texto': 'Estudo autônomo desativado.', 'isSystem': true}));
+      if (mounted) { setState(() => mensagens.add({'texto': 'Estudo autônomo desativado.', 'isSystem': true})); }
       return;
     }
     if (comando == 'estudo autonomo iniciar' || comando == 'estudo autônomo iniciar') {
       autonomousStudyEnabled = true;
       await salvarMemoriaInstantanea();
-      if (mounted) { setState(() => mensagens.add({'texto': 'Estudo autônomo ativado.', 'isSystem': true}));
+      if (mounted) { setState(() => mensagens.add({'texto': 'Estudo autônomo ativado.', 'isSystem': true})); }
       return;
     }
     if (comando == 'verificar atualizacoes' || comando == 'verificar atualizações') {
@@ -1003,7 +1003,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     } catch (error) {
       if (mounted) { setState(() => mensagens.add({
         'texto': 'Prova não processada: $error', 'isSystem': true,
-      }));
+      })); }
     }
   }
 
@@ -1041,7 +1041,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     } catch (error) {
       if (mounted) { setState(() => mensagens.add({
         'texto': 'Estudo autônomo adiado: $error', 'isSystem': true,
-      }));
+      })); }
     } finally {
       if (mounted) setState(() { researching = false; });
       await salvarMemoriaInstantanea();
