@@ -27,6 +27,10 @@ jobs:
       - name: Regenerar Estrutura Nativa Compatível
         run: flutter create . --platforms=android
 
+      - name: Instalar Android SDK Platform 35 e Build-Tools
+        run: |
+          echo "y" | sudo ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
+
       - name: Forçar compileSdk 35 no build.gradle
         run: |
           sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 35/g' android/app/build.gradle
@@ -36,14 +40,6 @@ jobs:
         run: |
           if grep -q 'id "org.jetbrains.kotlin.android"' android/settings.gradle; then
             sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.22"/g' android/settings.gradle
-          else
-            echo "Kotlin version not found in settings.gradle, trying build.gradle"
-          fi
-
-      - name: Atualizar versão do Kotlin no build.gradle (Fallback)
-        run: |
-          if grep -q "ext.kotlin_version" android/build.gradle; then
-            sed -i "s/ext.kotlin_version = '[^']*'/ext.kotlin_version = '1.9.22'/g" android/build.gradle
           fi
 
       - name: Get Dependencies
