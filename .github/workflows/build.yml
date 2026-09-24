@@ -1,0 +1,42 @@
+name: Gerar APK Estável Definitivo
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Baixar o código
+      uses: actions/checkout@v4
+    
+    - name: Configurar Java
+      uses: actions/setup-java@v5
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+        
+    - name: Configurar Flutter Estável (3.19.6)
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.19.6'
+        channel: 'stable'
+
+    - name: Criar Estrutura Android Limpa
+      run: |
+        rm -rf android
+        flutter create --platforms android --project-name agente_ia .
+        
+    - name: Baixar Pacotes
+      run: flutter pub get
+        
+    - name: Compilar APK Sem Erros
+      run: flutter build apk --release --split-per-abi
+
+    - name: Disponibilizar para Download
+      uses: actions/upload-artifact@v4
+      with:
+        name: Agente-APK-Final
+        path: build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
