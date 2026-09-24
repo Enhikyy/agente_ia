@@ -1,3 +1,4 @@
+import 'nova_developmental_language.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -240,6 +241,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final HemisferioDireitoQuantico cerebroMatriz = HemisferioDireitoQuantico();
+  final NovaDevelopmentalLanguage linguagem = NovaDevelopmentalLanguage();
   
   late File arquivoMemoria;
   String statusPensamento = "Repouso Quantico";
@@ -273,7 +275,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   Future<void> salvarMemoriaInstantanea() async {
     try {
       final temporario = File('${arquivoMemoria.path}.tmp');
-      await temporario.writeAsString(cerebroMatriz.gerarPacoteCriogenico(), flush: true);
+      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState()}), flush: true);
       if (await arquivoMemoria.exists()) {
         final anterior = File('${arquivoMemoria.path}.bak');
         await arquivoMemoria.copy(anterior.path);
@@ -290,7 +292,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       try {
         final dados = await arquivoMemoria.readAsString();
         if (dados.isNotEmpty) {
-          if (!cerebroMatriz.restaurarPacoteCriogenico(dados)) {
+          final pacote = json.decode(dados);
+          final memoriaCore = pacote is Map && pacote.containsKey('core') ? json.encode(pacote['core']) : dados;
+          if (pacote is Map && pacote['language'] != null) linguagem.importState(pacote['language']);
+          if (!cerebroMatriz.restaurarPacoteCriogenico(memoriaCore)) {
             final anterior = File('${arquivoMemoria.path}.bak');
             if (await anterior.exists()) {
               cerebroMatriz.restaurarPacoteCriogenico(await anterior.readAsString());
@@ -358,8 +363,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       statusPensamento = "Processando...";
     });
 
+    final resposta = linguagem.answer(textoUsuario);
+    linguagem.learnConversation(textoUsuario);
     cerebroMatriz.aprenderComOtimizacao(textoUsuario);
-    var resultado = cerebroMatriz.gerarPensamentoAutonomo(textoUsuario);
+    final resultado = {'resposta': resposta};
 
     setState(() {
       statusPensamento = "Repouso Quantico";
@@ -400,6 +407,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       final dadosArquivo = await compute(extrairTextoComMetricas, resultado.files.single.path!);
       String texto = dadosArquivo["texto"];
 
+      linguagem.learnDocument(texto, source: resultado.files.single.name);
       List<String> frases = texto.split('.');
       for (var frase in frases) {
         cerebroMatriz.aprenderComOtimizacao(frase);
@@ -441,7 +449,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           children: [
             Text("Sinapses: ${cerebroMatriz.sinapses.length}", style: const TextStyle(fontSize: 12, color: Colors.indigoAccent)),
             const SizedBox(width: 8),
-            Text("Simbolos: ${cerebroMatriz.dicionarioSintetico.length}", style: const TextStyle(fontSize: 12, color: Colors.white70)),
+            Text("Geracao: ${linguagem.generation} | Memorias: ${linguagem.memoryCount}", style: const TextStyle(fontSize: 12, color: Colors.white70)),
           ],
         ),
         actions: [
