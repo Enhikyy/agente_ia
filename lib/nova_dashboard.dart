@@ -67,8 +67,8 @@ class NovaDashboard extends StatefulWidget {
     required this.plugins, required this.onPlugin, required this.onResearch,
     required this.isThinking, required this.milestones,
     required this.onInstallLocal, required this.onInstallUrl,
-    required this.researchProgress, required this.researchStage,
-    required this.researchMs, required this.researching});
+    this.researchProgress = 0, this.researchStage = '',
+    this.researchMs = 0, this.researching = false});
   final NovaAppearance appearance;
   final int generation, concepts, experiences, responseMs;
   final Duration age;
