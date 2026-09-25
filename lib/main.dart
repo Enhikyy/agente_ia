@@ -1109,7 +1109,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       if (generationReports.length > 100) generationReports.removeAt(0);
       // Do not mislabel weight bytes as measured process RAM. Even if
       // accepted, promotion is limited to this data-only neural core.
-      if (accepted) neuralCore = candidate;
+      // The incumbent continues learning even when evolution is rejected.
+      neuralCore = accepted ? candidate : baseline;
       if (mounted) setState(() => mensagens.add({
         'texto': 'Experimento neural automático: '
             '${(oldAccuracy * 100).toStringAsFixed(1)}% → '
