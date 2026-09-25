@@ -51,12 +51,12 @@ class NovaCommandRouter {
   NovaCommand parse(String input) {
     final q = normalize(input);
     if (q.isEmpty) return const NovaCommand(NovaCommandKind.unknown);
-    if (const ['ajuda','help','comandos','o que voce consegue fazer']
-        .any(q ==)) {
+    if (const ['ajuda','help','comandos','o que voce consegue fazer'].contains(q)) {
       return const NovaCommand(NovaCommandKind.help);
     }
-    if (const ['status','status da nova','como voce esta','como esta']
-        .any(q ==)) return const NovaCommand(NovaCommandKind.status);
+    if (const ['status','status da nova','como voce esta','como esta'].contains(q)) {
+      return const NovaCommand(NovaCommandKind.status);
+    }
     if (const ['testar','testes','teste','diagnostico completo','rodar testes']
         .any(q ==)) return const NovaCommand(NovaCommandKind.tests);
     if (q == 'recursos' || q == 'hardware') {
