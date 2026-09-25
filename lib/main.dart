@@ -271,7 +271,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   final NovaCommandRouter commandRouter = NovaCommandRouter();
   NovaSelfTestReport? latestSelfTest;
   final NovaCodeDictionary codeDictionary = NovaCodeDictionary();
-  const NovaNeuralLab neuralLab = NovaNeuralLab();
+  final NovaNeuralLab neuralLab = const NovaNeuralLab();
   late NovaNeuralCheckpointStore checkpointStore;
   final List<NovaNeuralCheckpoint> checkpoints = [];
   Map<String, dynamic> dictionaryStats = <String, dynamic>{};
