@@ -23,10 +23,10 @@ void main() {
     expect(find.text('G2'), findsWidgets);
     expect(find.text('14 ms'), findsOneWidget);
     await tester.tap(find.text('Sistema'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 120));
     expect(find.text('Sistema'), findsWidgets);
     await tester.tap(find.text('Comandos'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 120));
     expect(find.text('Olá'), findsOneWidget);
   });
 }
