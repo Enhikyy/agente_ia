@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nova_module_runtime/nova_module_runtime.dart';
+import 'package:agente_ia/nova_module_runtime.dart';
 
 void main() {
   test('validates bounded instructions and executes deterministic modules', () {
