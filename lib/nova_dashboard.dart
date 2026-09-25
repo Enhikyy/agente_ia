@@ -653,167 +653,250 @@ class _NovaDashboardState extends State<NovaDashboard>
   Widget _evolution() {
     final ratio = widget.testTotal == 0
         ? 0.0 : widget.testPassed / widget.testTotal;
+    final labReports = widget.generationReports.where((r) =>
+      r['kind'] == 'laboratorioNeural').toList();
+    final recent = labReports.reversed.take(6).toList();
+    final nextParams = widget.neuralParameters < 196864
+        ? 196864 : widget.neuralParameters < 262000 ? 262000 : widget.neuralParameters * 2;
+    final paramProgress = (widget.neuralParameters / nextParams).clamp(0.0, 1.0).toDouble();
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
       children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          const Text('Evolução', style: TextStyle(fontSize: 27,
-            fontWeight: FontWeight.w900)),
+          const Text('Laboratório', style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900)),
           _pill('G' + widget.generation.toString(), accent),
         ]),
         const SizedBox(height: 5),
-        const Text('Evolução mensurável, sem transformar atividade em “inteligência”.',
-          style: TextStyle(color: dim, fontSize: 12)),
+        const Text('A evolução procura gastar menos parâmetros, acionar menos neurônios e responder com precisão.',
+          style: TextStyle(color: dim, fontSize: 12, height: 1.4)),
         const SizedBox(height: 15),
         card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            section('integridade do app'),
-            _status(widget.testTotal == 0 ? 'SEM TESTE' :
-              widget.testFailed == 0 ? 'OK' : 'ATENÇÃO'),
+          section('capacidade e eficiência'),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(child: _big('Parâmetros', _compact(widget.neuralParameters), Icons.memory_rounded, accent)),
+            const SizedBox(width: 8),
+            Expanded(child: _big('Ativos / passo', widget.activeNeuronBudget.toString(), Icons.bolt_rounded, const Color(0xFF59E391))),
           ]),
-          const SizedBox(height: 12),
-          Text(widget.testTotal == 0
-              ? 'Execute a bateria funcional para obter o primeiro diagnóstico.'
-              : widget.testPassed.toString() + '/' +
-                widget.testTotal.toString() + ' testes passaram.',
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
           const SizedBox(height: 10),
-          _bar('Cobertura funcional', ratio,
-            (ratio * 100).toStringAsFixed(0) + '%', accent),
-          const SizedBox(height: 12),
-          FilledButton.icon(onPressed: widget.onRunTests,
-            icon: const Icon(Icons.refresh_rounded),
-            label: const Text('Executar diagnóstico')),
-        ])),
-        const SizedBox(height: 11),
-        card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          section('casos de avaliação'),
-          const SizedBox(height: 8),
-          Text(widget.evaluationCount.toString() + ' casos registrados',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+          _bar('Caminho até a próxima etapa', paramProgress,
+            _compact(nextParams) + ' alvo', accent),
+          const SizedBox(height: 9),
+          Text(widget.neuralModel, style: const TextStyle(fontWeight: FontWeight.w800)),
           const SizedBox(height: 3),
-          Text(widget.evaluationAccuracy == null
-            ? 'Acurácia não aferida.'
-            : 'Acurácia: ' + (widget.evaluationAccuracy! * 100).toStringAsFixed(1) + '%',
-            style: const TextStyle(color: dim, fontSize: 11.5)),
-          const SizedBox(height: 10),
-          OutlinedButton.icon(onPressed: widget.onAddEvaluation,
-            icon: const Icon(Icons.add_task_rounded),
-            label: const Text('Adicionar caso')),
-          const SizedBox(height: 5),
-          const Text(
-            'Casos de avaliação são separados dos testes de integridade do aplicativo.',
-            style: TextStyle(color: dim, fontSize: 10.5)),
+          Text('${(100 - (widget.activeNeuronBudget / math.max(1, widget.neuralParameters > 0 ? 131 : 131) * 100)).clamp(0, 99).toStringAsFixed(0)}% de neurônios ocultos sem ativação por passo (estimativa de roteamento).',
+            style: const TextStyle(color: dim, fontSize: 10)),
+          const SizedBox(height: 12),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            FilledButton.icon(onPressed: widget.onEvolve, icon: const Icon(Icons.science_rounded), label: const Text('Executar laboratório')),
+            OutlinedButton.icon(onPressed: widget.onResearch, icon: const Icon(Icons.search_rounded), label: const Text('Pesquisar')),
+            OutlinedButton.icon(onPressed: widget.onRefine, icon: const Icon(Icons.tune_rounded), label: const Text('Refinar')),
+          ]),
         ])),
         const SizedBox(height: 11),
         card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          section('histórico recente'),
-          const SizedBox(height: 8),
-          if (widget.generationReports.isEmpty)
-            const Text('Nenhum relatório registrado.',
-              style: TextStyle(color: dim, fontSize: 11.5))
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            section('integridade'),
+            _status(widget.testTotal == 0 ? 'SEM TESTE' : widget.testFailed == 0 ? 'OK' : 'ATENÇÃO'),
+          ]),
+          const SizedBox(height: 10),
+          _bar('Testes funcionais', ratio, widget.testTotal == 0 ? '0 executados' :
+            widget.testPassed.toString() + '/' + widget.testTotal.toString(), accent),
+          const SizedBox(height: 9),
+          Text(widget.evaluationCount.toString() + ' casos independentes • ' +
+            (widget.evaluationAccuracy == null ? 'acurácia ainda não aferida' :
+              (widget.evaluationAccuracy! * 100).toStringAsFixed(1) + '% acurácia'),
+            style: const TextStyle(color: dim, fontSize: 11.5)),
+          const SizedBox(height: 9),
+          FilledButton.icon(onPressed: widget.onRunTests, icon: const Icon(Icons.verified_rounded),
+            label: const Text('Rodar todos os testes')),
+        ])),
+        const SizedBox(height: 11),
+        card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          section('ranking de gerações'),
+          const SizedBox(height: 9),
+          if (recent.isEmpty)
+            const Text('O ranking aparecerá após o primeiro laboratório.', style: TextStyle(color: dim, fontSize: 11.5))
           else
-            ...widget.generationReports.reversed.take(10).map((r) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(children: [
-                Container(width: 8, height: 8,
-                  decoration: BoxDecoration(
-                    color: r['generationPromoted'] == true
-                      ? const Color(0xFF59E391) : dim,
-                    shape: BoxShape.circle)),
+            ...recent.asMap().entries.map((entry) {
+              final rank = entry.key + 1;
+              final r = entry.value;
+              final params = (r['candidateParameters'] as num?)?.toInt();
+              final acc = (r['candidateAccuracy'] as num?)?.toDouble();
+              final lat = (r['candidateLatencyUs'] as num?)?.toInt();
+              final delta = (params == null || params == (r['baselineParameters'] as num?)?.toInt())
+                  ? 'mesmo tamanho' : (params < ((r['baselineParameters'] as num?)?.toInt() ?? params) ? '↓ parâmetros' : '↑ parâmetros');
+              return Padding(padding: const EdgeInsets.symmetric(vertical: 5), child: Row(children: [
+                SizedBox(width: 24, child: Text('#' + rank.toString(), style: TextStyle(color: accent, fontWeight: FontWeight.w900))),
+                Expanded(child: Text('G' + (r['generation'] ?? widget.generation).toString(), style: const TextStyle(fontWeight: FontWeight.w800))),
+                Text(params == null ? '—' : _compact(params), style: const TextStyle(fontSize: 10.5)),
                 const SizedBox(width: 8),
-                Expanded(child: Text(
-                  'G' + (r['generation'] ?? widget.generation).toString() +
-                    ' • ' + (r['kind'] ?? 'evolução').toString(),
-                  style: const TextStyle(fontSize: 11))),
-                Text(r['evaluationCount']?.toString() ?? '',
-                  style: const TextStyle(color: dim, fontSize: 9)),
-              ]),
+                Text(acc == null ? '—' : (acc * 100).toStringAsFixed(1) + '%', style: const TextStyle(fontSize: 10.5)),
+                const SizedBox(width: 8),
+                Text(lat == null ? '—' : (lat / 1000).toStringAsFixed(1) + ' ms', style: const TextStyle(fontSize: 10.5, color: dim)),
+                const SizedBox(width: 8),
+                Text(delta, style: TextStyle(fontSize: 9, color: delta.startsWith('↓') ? const Color(0xFF59E391) : dim)),
+              ]));
+            }),
+          const SizedBox(height: 4),
+          const Text('Ordenação local: precisão → latência → parâmetros. Não é um índice de inteligência.',
+            style: TextStyle(color: dim, fontSize: 9.5)),
+        ])),
+        const SizedBox(height: 11),
+        card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          section('checkpoints'),
+          const SizedBox(height: 9),
+          if (widget.checkpoints.isEmpty)
+            const Text('Nenhum checkpoint salvo ainda.', style: TextStyle(color: dim, fontSize: 11.5))
+          else
+            ...widget.checkpoints.take(6).map((checkpoint) => ListTile(
+              dense: true, contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.bookmark_rounded, color: accent, size: 20),
+              title: Text(checkpoint.label, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800)),
+              subtitle: Text('G' + checkpoint.generation.toString() + ' • ' + _compact(checkpoint.parameters) + ' parâmetros',
+                style: const TextStyle(color: dim, fontSize: 9.5)),
+              trailing: widget.onRestoreCheckpoint == null ? null : TextButton(
+                onPressed: () => widget.onRestoreCheckpoint!(checkpoint.id), child: const Text('Restaurar')),
             )),
+        ])),
+        const SizedBox(height: 11),
+        _educationTable(),
+        const SizedBox(height: 11),
+        card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          section('dicionário proprietário'),
+          const SizedBox(height: 8),
+          Text(widget.dictionaryEntries.toString() + ' entradas • formato NCD1', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Text(widget.dictionaryStats.isEmpty ? 'Aguardando dados para medir a compactação.' :
+            'Último bloco: ' + (widget.dictionaryStats['rawBytes'] ?? 0).toString() + ' B → ' +
+              (widget.dictionaryStats['packedBytes'] ?? 0).toString() + ' B (' +
+              ((widget.dictionaryStats['reductionPercent'] as num?)?.toStringAsFixed(1) ?? '0.0') + '%)',
+            style: const TextStyle(color: dim, fontSize: 10.5)),
         ])),
       ],
     );
   }
 
+  Widget _educationTable() {
+    final rows = <List<String>>[];
+    for (final topic in widget.schoolTopics) rows.add(['Escola', topic]);
+    for (final topic in widget.universityTopics) rows.add(['Universidade', topic]);
+    for (final topic in widget.postgraduateTopics) rows.add(['Pós-graduação', topic]);
+    return card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      section('trajetória educacional'),
+      const SizedBox(height: 9),
+      Table(
+        columnWidths: const {0: FixedColumnWidth(110), 1: FlexColumnWidth(), 2: FixedColumnWidth(30)},
+        children: [
+          const TableRow(children: [
+            Padding(padding: EdgeInsets.symmetric(vertical: 5), child: Text('ETAPA', style: TextStyle(color: dim, fontSize: 9, fontWeight: FontWeight.w800))),
+            Padding(padding: EdgeInsets.symmetric(vertical: 5), child: Text('COMPETÊNCIA', style: TextStyle(color: dim, fontSize: 9, fontWeight: FontWeight.w800))),
+            SizedBox(),
+          ]),
+          ...rows.map((row) {
+            final done = widget.passedEducationTopics.contains(row[1]);
+            return TableRow(children: [
+              Padding(padding: const EdgeInsets.symmetric(vertical: 5), child: Text(row[0], style: const TextStyle(fontSize: 9.5, color: dim))),
+              Padding(padding: const EdgeInsets.symmetric(vertical: 5), child: Text(row[1], style: const TextStyle(fontSize: 10.5))),
+              Padding(padding: const EdgeInsets.symmetric(vertical: 5), child: Icon(done ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
+                size: 15, color: done ? const Color(0xFF59E391) : dim)),
+            ]);
+          }),
+        ],
+      ),
+      const SizedBox(height: 5),
+      const Text('A aprovação continua exigindo avaliação independente; estudar sozinho não marca uma competência como concluída.',
+        style: TextStyle(color: dim, fontSize: 9.5, height: 1.35)),
+    ]));
+  }
   Widget _system() => ListView(
     padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
     children: [
-      const Text('Sistema', style: TextStyle(fontSize: 27,
-        fontWeight: FontWeight.w900)),
+      const Text('Sistema', style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900)),
       const SizedBox(height: 5),
-      const Text('Memória, pacotes, atualizações e controles.',
-        style: TextStyle(color: dim, fontSize: 12)),
+      const Text('Controle fino do modelo, do aplicativo e dos pacotes.', style: TextStyle(color: dim, fontSize: 12)),
       const SizedBox(height: 15),
       card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        section('memória'),
-        const SizedBox(height: 8),
-        _row('Importar PDF/TXT', 'Adicionar conhecimento local',
-          Icons.description_outlined, widget.onImport),
-        _row('Fazer backup', 'Snapshot recuperável', Icons.save_alt_rounded,
-          widget.onBackup),
-        if (widget.onDiagnostics != null)
-          _row('Exportar diagnóstico', 'Métricas agregadas',
-            Icons.file_present_outlined, widget.onDiagnostics),
+        section('controle do modelo'),
+        const SizedBox(height: 9),
+        Text('Neurônios ativos por passo: ' + widget.activeNeuronBudget.toString(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+        Slider(
+          value: widget.activeNeuronBudget.toDouble().clamp(4.0, 64.0),
+          min: 4, max: 64, divisions: 15,
+          label: widget.activeNeuronBudget.toString(),
+          onChanged: widget.onSetNeuronBudget == null ? null : (v) => widget.onSetNeuronBudget!(v.round()),
+        ),
+        const Text('Menor orçamento = menos neurônios acionados por passo. O laboratório valida se a precisão permanece.',
+          style: TextStyle(color: dim, fontSize: 10, height: 1.35)),
+        const SizedBox(height: 7),
+        _row('Aparência', 'Alternar paleta do tema', Icons.palette_outlined, widget.onAppearance),
+        _row('Executar laboratório', 'Testar compactação e velocidade', Icons.science_outlined, widget.onEvolve),
+        _row('Pesquisa', 'Pesquisar e incorporar conteúdo', Icons.search_outlined, widget.onResearch),
+        if (widget.onRefine != null) _row('Refinar recuperação', 'Otimizar o limiar com holdout', Icons.tune_outlined, widget.onRefine),
       ])),
       const SizedBox(height: 11),
       card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        section('pacotes'),
+        section('memória e segurança'),
         const SizedBox(height: 8),
-        _row('Instalar .nova.json', 'Dados interpretados, sem código',
-          Icons.install_desktop_outlined, widget.onInstallLocal),
-        _row('Instalar por HTTPS', 'Pacote protegido por SHA-256',
-          Icons.cloud_download_outlined, widget.onInstallUrl),
+        _row('Importar PDF/TXT', 'Adicionar conhecimento local', Icons.description_outlined, widget.onImport),
+        _row('Fazer backup', 'Snapshot recuperável', Icons.save_alt_rounded, widget.onBackup),
+        if (widget.onDiagnostics != null) _row('Exportar diagnóstico', 'Métricas agregadas', Icons.file_present_outlined, widget.onDiagnostics),
+      ])),
+      const SizedBox(height: 11),
+      card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        section('plugins'),
+        const SizedBox(height: 8),
+        _pluginTile('Laboratório neural', 'Otimização e checkpoints', Icons.science_rounded, () => widget.onPlugin('neural_lab')),
+        _pluginTile('Estatística', 'Métricas e relatórios', Icons.bar_chart_rounded, () => widget.onPlugin('statistics')),
+        _pluginTile('Documentos', 'Leitor e indexador', Icons.menu_book_rounded, () => widget.onPlugin('documents')),
+        const Divider(color: Colors.white10, height: 18),
+        _row('Instalar .nova.json', 'Pacote de conhecimento local', Icons.install_desktop_outlined, widget.onInstallLocal),
+        _row('Instalar por HTTPS', 'SHA-256 obrigatório', Icons.cloud_download_outlined, widget.onInstallUrl),
         if (widget.plugins.isNotEmpty) ...[
           const Divider(color: Colors.white10, height: 18),
           ...widget.plugins.map((p) => Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Text('• ' + p, style: const TextStyle(fontSize: 11.5)),
+            padding: const EdgeInsets.only(bottom: 5),
+            child: Row(children: [Icon(Icons.check_circle_rounded, color: accent, size: 14), const SizedBox(width: 7),
+              Expanded(child: Text(p, style: const TextStyle(fontSize: 11.5)))],),
           )),
         ],
       ])),
       const SizedBox(height: 11),
       card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        section('atualização'),
+        section('atualização e autonomia'),
         const SizedBox(height: 8),
-        Text(widget.availableUpdateBuild == null
-          ? 'Nenhuma atualização encontrada.'
-          : 'Build ' + widget.availableUpdateBuild.toString() + ' disponível.',
+        Text(widget.availableUpdateBuild == null ? 'Nenhuma atualização encontrada.' : 'Build ' + widget.availableUpdateBuild.toString() + ' disponível.',
           style: const TextStyle(fontSize: 11.5)),
         const SizedBox(height: 8),
         Row(children: [
           Expanded(child: OutlinedButton(
             onPressed: widget.checkingUpdates ? null : widget.onCheckUpdates,
-            child: Text(widget.checkingUpdates ? 'Consultando…'
-              : 'Verificar'))),
-          if (widget.availableUpdateBuild != null &&
-              widget.onUpdate != null) ...[
+            child: Text(widget.checkingUpdates ? 'Consultando…' : 'Verificar'))),
+          if (widget.availableUpdateBuild != null && widget.onUpdate != null) ...[
             const SizedBox(width: 8),
-            Expanded(child: FilledButton(onPressed: widget.onUpdate,
-              child: const Text('Abrir APK'))),
+            Expanded(child: FilledButton(onPressed: widget.onUpdate, child: const Text('Abrir APK'))),
           ],
         ]),
+        const SizedBox(height: 8),
+        if (widget.onSetSupervisedAutonomy != null)
+          Align(alignment: Alignment.centerLeft, child: OutlinedButton.icon(
+            onPressed: widget.onSetSupervisedAutonomy, icon: const Icon(Icons.shield_outlined, size: 17),
+            label: Text(widget.supervisedAutonomyConfigured ? 'Autonomia supervisionada ativa' : 'Ativar autonomia supervisionada'))),
       ])),
-      const SizedBox(height: 11),
-      if (widget.onSetSupervisedAutonomy != null)
-        card(Row(children: [
-          Icon(Icons.shield_outlined, color: accent),
-          const SizedBox(width: 9),
-          const Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Autonomia supervisionada',
-                style: TextStyle(fontWeight: FontWeight.w800)),
-              SizedBox(height: 3),
-              Text('Restringe alterações destrutivas.',
-                style: TextStyle(color: dim, fontSize: 10.5)),
-            ])),
-          OutlinedButton(
-            onPressed: widget.onSetSupervisedAutonomy,
-            child: Text(widget.supervisedAutonomyConfigured
-              ? 'Ativa' : 'Configurar')),
-        ])),
     ],
   );
 
+  Widget _pluginTile(String title, String subtitle, IconData icon, VoidCallback action) =>
+    ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Container(width: 38, height: 38, decoration: BoxDecoration(
+        color: accent.withOpacity(.10), borderRadius: BorderRadius.circular(12)),
+        child: Icon(icon, color: accent, size: 19)),
+      title: Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+      subtitle: Text(subtitle, style: const TextStyle(color: dim, fontSize: 9.5)),
+      trailing: const Icon(Icons.add_circle_outline_rounded, color: dim),
+      onTap: action,
+    );
   Widget _row(String title, String subtitle, IconData icon,
       VoidCallback? onTap) => ListTile(
     contentPadding: EdgeInsets.zero,
