@@ -3,9 +3,8 @@ import 'dart:math';
 /// Small, genuinely trainable character-level neural predictor.
 /// It is deliberately NOT an LLM. Training is bounded for mobile use.
 class NovaNeuralCore {
-  NovaNeuralCore({int width = 32})
+  NovaNeuralCore({this.width = 32})
       : assert(width >= 8 && width <= 128),
-        width = width,
         weights = List<double>.filled(width * width, 0);
   final int width;
   final List<double> weights;
