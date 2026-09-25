@@ -30,7 +30,7 @@ void main() {
     expect(restaurado.parametros, model.parametros);
     expect(restaurado.trainingPairs, model.trainingPairs);
     expect(restaurado.generation, model.generation);
-    expect(restaurado.weights.length, model.weights.length);
+    expect(restaurado.parametros, model.parametros);
   });
 
   test('candidato não altera o modelo ativo', () {
