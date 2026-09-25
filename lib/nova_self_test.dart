@@ -100,9 +100,10 @@ class NovaSelfTestSuite {
 
     test('Neural: treino altera previsão', () {
       final model = NovaNeuralCore();
+      final before = model.accuracy('abababababababab');
       model.train('ab' * 300, maxExamples: 64);
-      return model.trainingPairs > 0 &&
-          model.predictByte([97]) == 98 || model.accuracy('abababab') >= 0;
+      final after = model.accuracy('abababababababab');
+      return model.trainingPairs > 0 && after >= before && model.parametros == 100384;
     });
 
     test('Neural: serialização reversível', () {
