@@ -1241,17 +1241,23 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       final stamp = DateTime.now().millisecondsSinceEpoch;
       final backupFile = File(dir.path + '/agente_cerebro_' + stamp.toString() + '.quant');
       await backupFile.writeAsString(cerebroMatriz.gerarPacoteCriogenico(), flush: true);
-      final neuralFile = File(dir.path + '/nova_neural_' + stamp.toString() + '.ncd.json');
-      final neuralText = jsonEncode({
-        'format': 'nova-ncd-neural-snapshot',
+      final snapshotText = await arquivoMemoria.readAsString();
+      final memoryFile = File(dir.path + '/nova_memoria_' + stamp.toString() + '.ncd.json');
+      final packed = codeDictionary.encode(snapshotText);
+      final memoryText = jsonEncode({
+        'format': 'nova-ncd-memory-snapshot',
         'version': 1,
         'dictionary': codeDictionary.toJson(),
-        'payload': base64Encode(codeDictionary.encode(jsonEncode(neuralCore.toJson()))),
+        'rawBytes': utf8.encode(snapshotText).length,
+        'packedBytes': packed.length,
+        'payload': base64Encode(packed),
       });
-      await neuralFile.writeAsString(neuralText, flush: true);
+      await memoryFile.writeAsString(memoryText, flush: true);
+      dictionaryStats = codeDictionary.stats(snapshotText);
       setState(() {
         mensagens.add({
-          'texto': '[BACKUP] Memória: ' + backupFile.path + '\n[NCD] Neural: ' + neuralFile.path,
+          'texto': '[BACKUP] Memória: ' + backupFile.path + '\n[NCD] Snapshot codificado: ' + memoryFile.path +
+              '\nRedução NCD: ' + ((dictionaryStats['reductionPercent'] as num?)?.toStringAsFixed(1) ?? '0.0') + '%.',
           'isSystem': true,
         });
         rolarParaFinal();
