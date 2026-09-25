@@ -506,7 +506,7 @@ class _NovaDashboardState extends State<NovaDashboard>
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(22),
               borderSide: BorderSide.none),
-            prefixIcon: Icon(Icons.graph_3d_rounded, color: accent),
+            prefixIcon: Icon(Icons.hub_outlined, color: accent),
           ),
         )),
         const SizedBox(width: 8),
