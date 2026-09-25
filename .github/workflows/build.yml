@@ -165,7 +165,6 @@ jobs:
           sha256sum build/app/outputs/flutter-apk/*.apk | tee build/app/outputs/flutter-apk/SHA256SUMS.txt
 
       - name: Upload Artifact
-        if: env.NOVA_SIGNED == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: NOVA-Android-APK
@@ -185,3 +184,13 @@ jobs:
           cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/NOVA-universal.apk
           cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk build/app/outputs/flutter-apk/NOVA-moto-g62-arm64.apk
           gh release upload nova-preview build/app/outputs/flutter-apk/NOVA-universal.apk build/app/outputs/flutter-apk/NOVA-moto-g62-arm64.apk build/app/outputs/flutter-apk/SHA256SUMS.txt --clobber
+
+      - name: Publish separately labeled CI-signed test APK
+        if: github.ref == 'refs/heads/feature/nova-external-packs' && env.NOVA_SIGNED != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view nova-ci-debug >/dev/null 2>&1 || gh release create nova-ci-debug --prerelease --title 'NOVA CI — APK de testes (assinatura de desenvolvimento)' --notes 'APK assinado com chave de desenvolvimento. Pode exigir desinstalar uma versão assinada com outra chave; faça backup antes. Não é atualização da versão permanente.' --target "$GITHUB_SHA"
+          gh release edit nova-ci-debug --target "$GITHUB_SHA" --notes "Build ${{ github.run_number }} — commit $GITHUB_SHA. APK com assinatura de desenvolvimento, incompatível com atualizações assinadas por outra chave. Faça backup antes de qualquer desinstalação."
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk build/app/outputs/flutter-apk/NOVA-moto-g62-CI-debug.apk
+          gh release upload nova-ci-debug build/app/outputs/flutter-apk/NOVA-moto-g62-CI-debug.apk build/app/outputs/flutter-apk/SHA256SUMS.txt --clobber
