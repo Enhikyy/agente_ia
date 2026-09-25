@@ -1824,7 +1824,7 @@ e controles explícitos do usuário. ''';
     }
     return NovaDashboard(
       appearance: appearance,
-      generation: evolucao.generation,
+      generation: max(evolucao.generation, neuralCore.generation),
       concepts: evolucao.concepts,
       experiences: evolucao.experiences,
       connections: evolucao.connections,
