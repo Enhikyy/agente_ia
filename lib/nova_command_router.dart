@@ -67,7 +67,9 @@ class NovaCommandRouter {
     if (q == 'recursos' || q == 'hardware' || q == 'mostre os recursos') {
       return const NovaCommand(NovaCommandKind.resources);
     }
-    if (q == 'evoluir' || q == 'nova geracao' || q == 'evolucao') {
+    if (q == 'evoluir' || q == 'nova geracao' || q == 'evolucao' ||
+        q == 'expandir modelo' || q == 'aumentar parametros' ||
+        q == 'aumentar os parametros' || q == 'subir parametros') {
       return const NovaCommand(NovaCommandKind.evolve);
     }
     if (q == 'estudar agora' || q == 'estudar') {
@@ -136,7 +138,7 @@ class NovaCommandRouter {
 
   String get helpJson => jsonEncode({
     'comandos': [
-      'status', 'testes', 'rede neural', 'recursos', 'evoluir',
+      'status', 'testes', 'rede neural', 'recursos', 'evoluir', 'expandir modelo',
       'pesquisar <tema>', 'estude <tema>', 'estudar agora',
       'avaliar: pergunta | resposta esperada', 'backup',
       'exportar diagnostico', 'autonomia iniciar', 'autonomia parar',
