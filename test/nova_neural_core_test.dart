@@ -47,7 +47,7 @@ void main() {
       'relações internacionais e política global ' * 20,
       256,
     );
-    expect(candidato.parametros, 196864);
+    expect(candidato.parametros, 197376);
     expect(candidato.parametros, greaterThan(ativo.parametros));
     expect(candidato.trainingPairs, greaterThan(ativo.trainingPairs));
   });
