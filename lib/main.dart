@@ -1152,7 +1152,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         '  ESTUDO  AUTONOMO   NOVA   ${i % 10}  ');
     final benchmarker = const NovaModuleBenchmarker();
     final expected = (String text) =>
-        text.toLowerCase().trim().replaceAll(RegExp(r'\\s+'), ' ');
+        text.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
     final before = await benchmarker.measure(baseline, inputs, expected);
     final after = await benchmarker.measure(candidate, inputs, expected);
     final accepted = before != null && after != null &&
