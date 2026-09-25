@@ -16,6 +16,9 @@ import 'nova_optimizer.dart';
 import 'nova_web_research.dart';
 import 'nova_pack_installer.dart';
 import 'nova_growth_widgets.dart';
+import 'nova_code_dictionary.dart';
+import 'nova_neural_lab.dart';
+import 'nova_neural_checkpoint.dart';
 import 'dart:async';
 import 'nova_dashboard.dart';
 import 'nova_evolution_engine.dart';
@@ -267,7 +270,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   final NovaEvolutionEngine evolucao = NovaEvolutionEngine();
   final NovaCommandRouter commandRouter = NovaCommandRouter();
   NovaSelfTestReport? latestSelfTest;
-  
+  final NovaCodeDictionary codeDictionary = NovaCodeDictionary();
+  const NovaNeuralLab neuralLab = NovaNeuralLab();
+  late NovaNeuralCheckpointStore checkpointStore;
+  final List<NovaNeuralCheckpoint> checkpoints = [];
+
   late File arquivoMemoria;
   late NovaPackInstaller packInstaller;
   bool installingPack = false;
@@ -414,7 +421,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     try {
       if (!memoryReady) return;
       final temporario = File('${arquivoMemoria.path}.tmp');
-      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens, 'milestones': milestones.map((e) => e.toJson()).toList(), 'generationReports': generationReports, 'neuralCore': neuralCore.toJson(), 'responseSamplesMs': responseSamplesMs, 'evaluationCases': evaluationCases, 'retrievalThreshold': retrievalThreshold, 'backgroundEnabled': backgroundEnabled, 'resourceSamples': resourceSamples, 'autoRefine': autoRefine, 'autonomyPolicy': autonomyPolicy.toJson(), 'autonomousStudyEnabled': autonomousStudyEnabled, 'schoolLessonsCompleted': schoolLessonsCompleted, 'postgraduateSessions': postgraduateSessions, 'educationAssessments': educationAssessments.map((a) => a.toJson()).toList(), 'lastAutonomousStudy': lastAutonomousStudy?.toIso8601String(), 'lastSelfTest': latestSelfTest?.toJson()}), flush: true);
+      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens, 'milestones': milestones.map((e) => e.toJson()).toList(), 'generationReports': generationReports, 'neuralCore': neuralCore.toJson(), 'responseSamplesMs': responseSamplesMs, 'evaluationCases': evaluationCases, 'retrievalThreshold': retrievalThreshold, 'backgroundEnabled': backgroundEnabled, 'resourceSamples': resourceSamples, 'autoRefine': autoRefine, 'autonomyPolicy': autonomyPolicy.toJson(), 'autonomousStudyEnabled': autonomousStudyEnabled, 'schoolLessonsCompleted': schoolLessonsCompleted, 'postgraduateSessions': postgraduateSessions, 'educationAssessments': educationAssessments.map((a) => a.toJson()).toList(), 'lastAutonomousStudy': lastAutonomousStudy?.toIso8601String(), 'lastSelfTest': latestSelfTest?.toJson(), 'codeDictionary': codeDictionary.toJson()}), flush: true);
       if (await arquivoMemoria.exists()) {
         final anterior = File('${arquivoMemoria.path}.bak');
         await arquivoMemoria.copy(anterior.path);
@@ -582,6 +589,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       for (final p in result.pages) {
         final learned = p.title + '. ' + p.extract;
         linguagem.learnDocument(learned, source: p.url);
+        codeDictionary.learn(learned);
         evolucao.observe(learned);
         neuralCore.train(learned, learningRate: .04);
         cerebroMatriz.aprenderComOtimizacao(learned);
@@ -777,6 +785,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     final dir = await getApplicationDocumentsDirectory();
     arquivoMemoria = File('${dir.path}/matriz_neural_quantica_v6.json');
     packInstaller = NovaPackInstaller(Directory('${dir.path}/nova_packs'));
+    checkpointStore = NovaNeuralCheckpointStore(Directory('${dir.path}/nova_checkpoints'));
     pluginsAdquiridos = (await packInstaller.installed())
         .map((pack) => pack.name).toList();
     memoryReady = true;
@@ -804,6 +813,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             if (pacote['generationReports'] is List) {
               generationReports.addAll((pacote['generationReports'] as List)
                 .whereType<Map>().map((r) => Map<String, dynamic>.from(r)).take(100));
+            }
+            if (pacote['codeDictionary'] is Map) {
+              codeDictionary.fromJson(pacote['codeDictionary']);
             }
             if (pacote['lastSelfTest'] is Map) {
               try { latestSelfTest = NovaSelfTestReport.fromJson(pacote['lastSelfTest']); }
@@ -1139,6 +1151,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     responseSamplesMs.add(lastResponseMs);
     if (responseSamplesMs.length > 100) responseSamplesMs.removeAt(0);
     linguagem.learnConversation(textoUsuario);
+    codeDictionary.learn(textoUsuario);
     evolucao.observe(textoUsuario);
     cerebroMatriz.aprenderComOtimizacao(textoUsuario);
     neuralCore.train(textoUsuario, learningRate: .025);
