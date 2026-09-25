@@ -533,6 +533,90 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _runNeuralBenchmark() async {
+    if (neuralExperimentBusy) return;
+    neuralExperimentBusy = true;
+    if (mounted) setState(() => statusPensamento = 'Benchmark neural em execução…');
+    try {
+      const corpus = '''
+A aprendizagem local da NOVA usa memória persistente, avaliação independente e evolução por gerações.
+O núcleo neural aprende previsão de bytes em UTF-8 e usa ativação esparsa para calcular somente uma pequena
+fração dos neurônios por passo. A geração seguinte só deve ser promovida quando houver evidência mensurável
+de melhora de qualidade e eficiência. Checkpoints preservam estados anteriores para recuperação segura.
+A pesquisa local alimenta documentos, conceitos e experiências. A NOVA não deve inventar conhecimento:
+quando uma resposta não estiver sustentada pela memória disponível, deve indicar a ausência de evidência.
+O dicionário proprietário organiza tokens e mede compressão de forma reversível. Plugins são módulos limitados,
+verificados e integrados ao perfil local. O objetivo da evolução é produzir respostas mais rápidas e precisas
+com menos parâmetros ativos, mantendo rastreabilidade entre gerações, testes e decisões de promoção.
+A trajetória educacional pode registrar escola, universidade e pós-graduação como etapas independentes de estudo.
+Benchmarks devem registrar amostra, acurácia, latência e tamanho do modelo sem confundir métricas de memória
+serializada com RAM real do processo. A autonomia deve respeitar bateria, temperatura, memória disponível
+e controles explícitos do usuário. ''';
+      final split = (corpus.length * .8).floor();
+      final result = neuralLab.run(
+        baseline: neuralCore.copy(),
+        training: corpus.substring(0, split),
+        holdout: corpus.substring(split),
+      );
+      final best = result.candidates.isEmpty ? null : result.candidates.first;
+      generationReports.add({
+        'at': DateTime.now().toUtc().toIso8601String(),
+        'kind': 'neuralBenchmark',
+        'generation': neuralCore.generation,
+        'generationPromoted': false,
+        'baselineParameters': result.baseline.parameters,
+        'baselineActiveParameters': result.baseline.activeParameters,
+        'baselineAccuracy': result.baseline.accuracy,
+        'baselineLatencyUs': result.baseline.latencyUs,
+        'candidateCount': result.candidates.length,
+        'bestCandidate': best?.label,
+        'bestParameters': best?.parameters,
+        'bestActiveParameters': best?.activeParameters,
+        'bestAccuracy': best?.accuracy,
+        'bestLatencyUs': best?.latencyUs,
+      });
+      if (generationReports.length > 100) generationReports.removeAt(0);
+      await salvarMemoriaInstantanea();
+      if (mounted) {
+        setState(() {
+          statusPensamento = 'Benchmark concluído';
+          mensagens.add({
+            'texto': 'Benchmark neural concluído: ${result.candidates.length} candidatos avaliados. '
+                'Nenhum candidato foi promovido automaticamente.',
+            'isSystem': true,
+          });
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          statusPensamento = 'Benchmark com erro';
+          mensagens.add({'texto': 'Benchmark neural falhou: $error', 'isSystem': true});
+        });
+      }
+    } finally {
+      neuralExperimentBusy = false;
+    }
+  }
+
+  Future<void> _setPalette(NovaPalette palette) async {
+    appearance.palette = palette;
+    await salvarMemoriaInstantanea();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _setDensity(NovaDensity density) async {
+    appearance.density = density;
+    await salvarMemoriaInstantanea();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _setAvatar(int avatar) async {
+    appearance.avatar = avatar.clamp(0, 3);
+    await salvarMemoriaInstantanea();
+    if (mounted) setState(() {});
+  }
+
   Future<void> _addEvaluationCase() async {
     final question = TextEditingController();
     final expected = TextEditingController();
@@ -1440,6 +1524,23 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           }));
         });
         break;
+      case 'benchmarks':
+        _installBuiltInPlugin(id, 'Benchmarks').then((_) => _runNeuralBenchmark());
+        break;
+      case 'research':
+        _installBuiltInPlugin(id, 'Pesquisa').then((_) => _researchStatus());
+        break;
+      case 'optimizer':
+        _installBuiltInPlugin(id, 'Refino').then((_) => refinarParametros());
+        break;
+      case 'memory':
+        _installBuiltInPlugin(id, 'Memória').then((_) => gerarBackupCriogenico());
+        break;
+      case 'autonomy':
+        _installBuiltInPlugin(id, 'Autonomia').then((_) => processarEntrada(
+          autonomousStudyEnabled ? 'parar estudo autonomo' : 'estudar autonomamente',
+        ));
+        break;
       default:
         if (mounted) setState(() => mensagens.add({
           'texto': 'Plugin não reconhecido: ' + id,
@@ -1734,6 +1835,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       passedEducationTopics: educationAssessments.where((a) => a.passed).map((a) => a.topic).toSet().toList(),
       onRestoreCheckpoint: _restoreCheckpoint,
       onSetNeuronBudget: _setActiveNeuronBudget,
+      onSetPalette: _setPalette,
+      onSetDensity: _setDensity,
+      onSetAvatar: _setAvatar,
+      onBenchmark: _runNeuralBenchmark,
       testPassed: latestSelfTest?.passedCount ?? 0,
       testTotal: latestSelfTest?.tests.length ?? 0,
       testFailed: latestSelfTest?.failedCount ?? 0,
