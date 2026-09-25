@@ -511,7 +511,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       'holdoutAfter': result.candidateAccuracy,
       'evaluationCount': evaluationCases.length,
     });
-    if (generationReports.length > 100) generationReports.removeAt(0);
+    if (generationReports.length > 100) { generationReports.removeAt(0); }
     await salvarMemoriaInstantanea();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -1142,7 +1142,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           ])
         : await store.load(active);
     // Preserve the initial implementation as an explicit rollback target.
-    if (active == null) await store.activate(await store.stage(baseline));
+    if (active == null) { await store.activate(await store.stage(baseline)); }
     final candidate = NovaModule(
       generation: baseline.generation + 1,
       instructions: [{'op': 'normalize'}],
