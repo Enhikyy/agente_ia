@@ -31,10 +31,12 @@ class NovaNeuralLabResult {
     required this.baseline,
     required this.candidates,
     required this.promotedLabel,
+    required this.promotedModel,
   });
   final NovaNeuralBenchScore baseline;
   final List<NovaNeuralBenchScore> candidates;
   final String? promotedLabel;
+  final NovaNeuralCore? promotedModel;
 
   List<NovaNeuralBenchScore> get ranking {
     final all = <NovaNeuralBenchScore>[baseline, ...candidates];
@@ -132,6 +134,7 @@ class NovaNeuralLab {
         model, holdout));
     }
     String? promoted;
+    NovaNeuralCore? promotedModel;
     for (final score in scores) {
       final faster = score.latencyUs <= base.latencyUs * 0.8;
       final smaller = score.parameters <= base.parameters;
@@ -139,9 +142,13 @@ class NovaNeuralLab {
       if (faster && smaller && precise) {
         if (promoted == null) {
           promoted = score.label;
+          promotedModel = models[scores.length];
         } else {
           final current = scores.firstWhere((item) => item.label == promoted);
-          if (_better(score, current)) promoted = score.label;
+          if (_better(score, current)) {
+            promoted = score.label;
+            promotedModel = models[scores.indexOf(score)];
+          }
         }
       }
     }
@@ -149,6 +156,7 @@ class NovaNeuralLab {
       baseline: base,
       candidates: scores,
       promotedLabel: promoted,
+      promotedModel: promotedModel,
     );
   }
 
