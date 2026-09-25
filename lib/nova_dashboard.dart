@@ -172,27 +172,18 @@ class _NovaDashboardState extends State<NovaDashboard> with TickerProviderStateM
     return value.toString();
   }
 
+  // Progress reflects an actual accepted generation, not a synthetic score.
   double evolutionPercent() {
-    final list = widget.generationReports.where((r) => r['kind']?.toString().contains('neural') ?? false).toList();
-    if (list.isEmpty) return 0;
-    final row = list.last;
-    final bp = (row['baselineParameters'] as num?)?.toDouble() ?? 0;
-    final cp = (row['bestParameters'] as num?)?.toDouble() ?? bp;
-    final ba = (row['baselineAccuracy'] as num?)?.toDouble() ?? 0;
-    final ca = (row['bestAccuracy'] as num?)?.toDouble() ?? ba;
-    final bl = (row['baselineLatencyUs'] as num?)?.toDouble() ?? 0;
-    final cl = (row['bestLatencyUs'] as num?)?.toDouble() ?? bl;
-    if (bp <= 0) return 0;
-    final sizeGain = clamp01((bp - cp) / bp);
-    final accuracyGain = clamp01(ca - ba);
-    final latencyGain = bl > 0 ? clamp01((bl - cl) / bl) : 0;
-    return ((sizeGain * .4 + latencyGain * .4 + accuracyGain * 12) * 100).clamp(0, 100).toDouble();
+    final promoted = widget.generationReports.where((r) =>
+      r['accepted'] == true ||
+      (r['kind'] == 'laboratorioNeural' && r['generationPromoted'] == true)).toList();
+    if (promoted.isEmpty) return 0;
+    final latest = promoted.last;
+    final generation = (latest['generation'] as num?)?.toInt() ?? -1;
+    return generation == widget.generation ? 100 : 0;
   }
 
-  double nextProgress() {
-    if (widget.nextNeuralParameters <= widget.neuralParameters) return 1;
-    return clamp01(widget.neuralParameters / widget.nextNeuralParameters);
-  }
+  double nextProgress() => evolutionPercent() / 100;
 
   Widget surface(Widget child, {EdgeInsets padding = const EdgeInsets.all(16), double radius = 24}) => Container(
     padding: padding,
@@ -303,11 +294,15 @@ class _NovaDashboardState extends State<NovaDashboard> with TickerProviderStateM
     }
   }
 
-  Widget homePage(Key key) => ListView(
-    key: key, padding: EdgeInsets.fromLTRB(pad, 5, pad, 103),
-    children: [hero(), const SizedBox(height: 13), searchBar(), const SizedBox(height: 14),
-      quickActions(), const SizedBox(height: 14), chat(), const SizedBox(height: 14), metrics()],
-  );
+  Widget homePage(Key key) => Column(key: key, children: [
+    Padding(padding: EdgeInsets.fromLTRB(pad, 4, pad, 10), child: hero()),
+    Expanded(child: Padding(
+      padding: EdgeInsets.symmetric(horizontal: pad),
+      child: chat(),
+    )),
+    Padding(padding: EdgeInsets.fromLTRB(pad, 10, pad, 90),
+      child: quickActions()),
+  ]);
 
   Widget hero() => surface(Row(children: [
     AnimatedBuilder(animation: pulse, builder: (_, __) => Transform.scale(
@@ -387,27 +382,33 @@ class _NovaDashboardState extends State<NovaDashboard> with TickerProviderStateM
     ),
   );
 
-  Widget chat() {
-    final items = widget.messages.length > 5 ? widget.messages.sublist(widget.messages.length - 5) : widget.messages;
-    return surface(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [
-        Text('CONVERSA', style: TextStyle(color: accent, fontSize: 9.5, fontWeight: FontWeight.w900, letterSpacing: 1.4)),
-        const Spacer(),
-        if (widget.isThinking || widget.isReading) NovaTypingIndicator(
-          color: accent, label: widget.isThinking ? 'Processando' : 'Lendo',
-        ),
-      ]),
-      const SizedBox(height: 10),
-      if (items.isEmpty)
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 16),
-          child: Text('Memória pronta. Comece uma conversa ou peça uma tarefa.', style: TextStyle(color: muted, fontSize: 12)),
-        )
-      else ...items.map(messageBubble),
-      const SizedBox(height: 9),
-      composer(),
-    ]));
-  }
+  Widget chat() => surface(Column(children: [
+    Row(children: [
+      Text('CONVERSA', style: TextStyle(color: accent, fontSize: 10,
+        fontWeight: FontWeight.w900, letterSpacing: 1.4)),
+      const Spacer(),
+      if (widget.isThinking || widget.isReading) NovaTypingIndicator(
+        color: accent, label: widget.isThinking ? 'Processando' : 'Lendo'),
+    ]),
+    const SizedBox(height: 12),
+    Expanded(child: widget.messages.isEmpty
+      ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.auto_awesome_rounded, color: accent, size: 42),
+          const SizedBox(height: 14),
+          const Text('Converse com a NOVA', style: TextStyle(fontSize: 18,
+            fontWeight: FontWeight.w900)),
+          const SizedBox(height: 5),
+          const Text('Diga olá ou peça uma tarefa.',
+            style: TextStyle(color: muted, fontSize: 12)),
+        ]))
+      : ListView.builder(
+          controller: widget.scroll,
+          itemCount: widget.messages.length,
+          itemBuilder: (_, index) => messageBubble(widget.messages[index]),
+        )),
+    const SizedBox(height: 9),
+    composer(),
+  ]), padding: const EdgeInsets.all(13));
 
   Widget messageBubble(Map<String, dynamic> item) {
     final system = item['isSystem'] == true;
@@ -615,8 +616,8 @@ class _NovaDashboardState extends State<NovaDashboard> with TickerProviderStateM
           builder: (_, v, __) => CircularProgressIndicator(value: v, strokeWidth: 7, color: accent, backgroundColor: Colors.white.withOpacity(.05)),
         ),
         Column(mainAxisSize: MainAxisSize.min, children: [
-          Text((progress * 100).toStringAsFixed(0) + '%', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
-          const Text('prontidão', style: TextStyle(color: muted, fontSize: 8)),
+          Text(progress == 1 ? '100%' : '0%', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+          const Text('promoção', style: TextStyle(color: muted, fontSize: 8)),
         ]),
         AnimatedBuilder(animation: pulse, builder: (_, __) => Container(
           width: 78 + pulse.value * 8, height: 78 + pulse.value * 8,
@@ -631,9 +632,9 @@ class _NovaDashboardState extends State<NovaDashboard> with TickerProviderStateM
           Text('G' + (widget.generation + 1).toString(), style: TextStyle(color: accent, fontWeight: FontWeight.w900)),
         ]),
         const SizedBox(height: 7),
-        Text(widget.nextNeuralParameters.toString() + ' parâmetros planejados', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900)),
+        Text(widget.nextNeuralParameters.toString() + ' parâmetros possíveis', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900)),
         const SizedBox(height: 5),
-        Text(widget.activeNeuronBudget.toString() + ' neurônios ativos por passo • promoção baseada em evidências',
+        Text(widget.activeNeuronBudget.toString() + ' neurônios ativos • próxima geração somente após aprovação',
           style: const TextStyle(color: muted, fontSize: 10.5, height: 1.35)),
       ])),
     ]));
@@ -802,7 +803,7 @@ class _NovaDashboardState extends State<NovaDashboard> with TickerProviderStateM
   ]));
 
   Widget pluginCard(_PluginInfo plugin) {
-    final installed = widget.plugins.contains(plugin.title);
+    final installed = widget.plugins.contains(plugin.title) || (plugin.id == 'neural_lab' && widget.plugins.contains('Laboratório neural'));
     return Container(
       width: 205, padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(color: Colors.white.withOpacity(.023), borderRadius: BorderRadius.circular(17), border: Border.all(color: plugin.color.withOpacity(.15))),
@@ -881,9 +882,9 @@ class _NovaDashboardState extends State<NovaDashboard> with TickerProviderStateM
             const SizedBox(width: 8),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                Text('EVOLUÇÃO', style: TextStyle(color: accent, fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+                Text('GERAÇÃO CONFIRMADA', style: TextStyle(color: accent, fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
                 const Spacer(),
-                Text(evolutionPercent().toStringAsFixed(1) + '%', style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900)),
+                Text(evolutionPercent() == 100 ? 'G' + widget.generation.toString() + ' aprovada' : 'Aguardando promoção', style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900)),
               ]),
               const SizedBox(height: 4),
               TweenAnimationBuilder<double>(
