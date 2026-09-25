@@ -38,10 +38,17 @@ class NovaGenerationCoordinator {
     }
     try {
       await persist(nextState);
-    } catch (_) {
-      // Best effort rollback; retain archive even if persistence fails.
-      await persist(previousState);
-      rethrow;
+    } catch (originalError, originalStack) {
+      // Preserve the original failure if rollback also fails. The immutable
+      // archive remains available for manual crash recovery.
+      try {
+        await persist(previousState);
+      } catch (rollbackError) {
+        Error.throwWithStackTrace(StateError(
+          'Promotion failed: $originalError; rollback also failed: '
+          '$rollbackError. Restore archive: ${backup.path}'), originalStack);
+      }
+      Error.throwWithStackTrace(originalError, originalStack);
     }
     return backup;
   }
