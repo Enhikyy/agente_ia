@@ -7,9 +7,9 @@ import 'dart:math';
 class NovaNeuralCore {
   static const int vocabulario = 256;
   static const int dimensaoEntrada = 128;
-  static const int dimensaoInicial = 131;
+  static const int dimensaoInicial = 130;
   static const int versao = 3;
-  static const List<int> etapas = <int>[64, 80, 96, 112, 131, 160, 192, 256, 384, 512, 768, 1024];
+  static const List<int> etapas = <int>[64, 80, 96, 112, 130, 160, 192, 256, 384, 512, 768, 1024];
 
   NovaNeuralCore({
     int hiddenSize = dimensaoInicial,
