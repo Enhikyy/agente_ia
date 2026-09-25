@@ -129,7 +129,7 @@ class NovaSelfTestSuite {
     });
 
     test('Formato: avaliação inválida é rejeitada', () {
-      final router = const NovaCommandRouter();
+      const router = NovaCommandRouter();
       final c = router.parse('avaliar: apenas pergunta');
       final parts = c.argument.split('|');
       return c.kind == NovaCommandKind.addEvaluation &&
