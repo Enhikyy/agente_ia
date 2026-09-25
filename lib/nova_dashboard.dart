@@ -546,11 +546,11 @@ class NovaBenchmarkPanel extends StatelessWidget {
         metric('Precisão', accuracy is num ?
           '${(accuracy * 100).toStringAsFixed(1)}%' : 'N/D'),
         const SizedBox(width: 8),
-        metric('Latência', latency is num ? '${latency} µs' : 'N/D'),
+        metric('Latência', latency is num ? '$latency µs' : 'N/D'),
       ]),
       const SizedBox(height: 8),
       Row(children: [
-        metric('RAM medida', ram is num ? '${ram} KB' : 'N/D'),
+        metric('RAM medida', ram is num ? '$ram KB' : 'N/D'),
         const SizedBox(width: 8),
         metric('Energia / geração', 'N/D'),
       ]),
@@ -572,8 +572,8 @@ class NovaBenchmarkPanel extends StatelessWidget {
             title: Text(r['generationPromoted'] == true ?
               'Geração promovida' : 'Teste de parâmetros'),
             subtitle: Text('Precisão: ${a is num ? '${(a * 100).toStringAsFixed(1)}%' : 'N/D'} · '
-              'Latência: ${speed is num ? '${speed} µs' : 'N/D'} · '
-              'RAM: ${memory is num ? '${memory} KB' : 'N/D'}'));
+              'Latência: ${speed is num ? '$speed µs' : 'N/D'} · '
+              'RAM: ${memory is num ? '$memory KB' : 'N/D'}'));
         }),
       ],
       const SizedBox(height: 8),
