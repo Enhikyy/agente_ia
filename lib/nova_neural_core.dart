@@ -175,6 +175,13 @@ class NovaNeuralCore {
         d1[j] *= (1 - h1[j] * h1[j]);
       }
       final n = max(1, contexto.length);
+      final entrada = List<double>.filled(dimensaoEntrada, 0);
+      for (final token in contexto) {
+        final base = token * dimensaoEntrada;
+        for (var i = 0; i < dimensaoEntrada; i++) {
+          entrada[i] += embedding[base + i] / n;
+        }
+      }
       for (var i = 0; i < dimensaoEntrada; i++) {
         var grad = 0.0;
         for (var j = 0; j < hiddenSize; j++) {
@@ -185,19 +192,8 @@ class NovaNeuralCore {
               learningRate * grad / n;
         }
         for (var j = 0; j < hiddenSize; j++) {
-          w1[i * hiddenSize + j] += learningRate * d1[j] *
-              (1 / n) * contexto.length == 0 ? 0 :
-              learningRate * 0.0;
-        }
-      }
-      // Recalcula W1 com a entrada efetiva para evitar estado auxiliar grande.
-      for (var i = 0; i < dimensaoEntrada; i++) {
-        var avg = 0.0;
-        for (final token in contexto) {
-          avg += embedding[token * dimensaoEntrada + i] / n;
-        }
-        for (var j = 0; j < hiddenSize; j++) {
-          w1[i * hiddenSize + j] += learningRate * d1[j] * avg;
+          w1[i * hiddenSize + j] +=
+              learningRate * d1[j] * entrada[i];
         }
       }
       trainingPairs++;
