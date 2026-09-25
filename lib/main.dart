@@ -1,3 +1,4 @@
+import 'nova_module_runtime.dart';
 import 'nova_neural_core.dart';
 import 'nova_diagnostics.dart';
 import 'nova_autonomy_policy.dart';
@@ -279,6 +280,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   int lastResearchMs = 0;
   final List<Map<String, dynamic>> generationReports = [];
   NovaNeuralCore neuralCore = NovaNeuralCore();
+  String? latestStagedModule;
   bool neuralExperimentBusy = false;
   final List<int> responseSamplesMs = [];
   final List<Map<String, String>> evaluationCases = [];
@@ -1127,6 +1129,33 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     }
   }
 
+  /// Produces an installable data-only module; no Android APK replacement.
+  /// A staged module is deliberately NOT activated before real benchmarks.
+  Future<void> _stageAutonomousModule() async {
+    if (!resourceDecision.mayRunIntensive) return;
+    final directory = await getApplicationDocumentsDirectory();
+    final store = NovaModuleStore(
+        Directory('${directory.path}/nova_modules'));
+    final active = await store.activeHash();
+    final activeGeneration = active == null
+        ? 0 : (await store.load(active)).generation;
+    final module = NovaModule(
+      generation: activeGeneration + 1,
+      instructions: [
+        {'op': 'normalize'},
+        {'op': 'truncate', 'length': 4096},
+      ],
+    );
+    latestStagedModule = await store.stage(module);
+    if (mounted) setState(() => mensagens.add({
+      'texto': 'Módulo NOVA-MODULE/1 criado e verificado: '
+          '${latestStagedModule!.substring(0, 12)}. '
+          'Aguardando benchmarks de precisão, latência e RAM real '
+          'antes da ativação. Nenhum APK foi substituído.',
+      'isSystem': true,
+    }));
+  }
+
   Future<void> _autonomousStudy() async {
     if (!mounted || !memoryReady || !autonomousStudyEnabled || researching ||
         isLendo || isThinking || !autonomyPolicy.canResearchScheduled) return;
@@ -1154,6 +1183,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       }
       await _runNeuralExperiment(result.pages.map((page) =>
           '${page.title}. ${page.extract}').join('\\n'));
+      await _stageAutonomousModule();
       if (universityGraduated) postgraduateSessions++;
       schoolLessonsCompleted++;
       setState(() => mensagens.add({
