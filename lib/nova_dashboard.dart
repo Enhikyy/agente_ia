@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'nova_growth_widgets.dart';
+import 'nova_neural_checkpoint.dart';
 
 final Future<Uint8List> _novaEmblem = rootBundle
     .loadString('assets/branding/nova_icon.jpg.base64')
@@ -110,6 +111,16 @@ class NovaDashboard extends StatefulWidget {
     this.researching = false,
     this.generationReports = const [],
     this.resourceSamples = const [],
+    this.checkpoints = const [],
+    this.dictionaryEntries = 0,
+    this.dictionaryStats = const {},
+    this.schoolTopics = const [],
+    this.universityTopics = const [],
+    this.postgraduateTopics = const [],
+    this.passedEducationTopics = const [],
+    this.activeNeuronBudget = 24,
+    this.onRestoreCheckpoint,
+    this.onSetNeuronBudget,
     this.evaluationCount = 0,
     this.evaluationAccuracy,
     this.testPassed = 0,
@@ -144,6 +155,13 @@ class NovaDashboard extends StatefulWidget {
   final int researchMs;
   final List<NovaMilestone> milestones;
   final List<Map<String, dynamic>> generationReports, resourceSamples;
+  final List<NovaNeuralCheckpoint> checkpoints;
+  final int dictionaryEntries, activeNeuronBudget;
+  final Map<String, dynamic> dictionaryStats;
+  final List<String> schoolTopics, universityTopics, postgraduateTopics;
+  final List<String> passedEducationTopics;
+  final ValueChanged<String>? onRestoreCheckpoint;
+  final ValueChanged<int>? onSetNeuronBudget;
   final List<String> plugins;
   final ValueChanged<String> onPlugin;
   final VoidCallback onInstallLocal, onInstallUrl;
