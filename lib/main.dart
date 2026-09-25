@@ -1392,71 +1392,83 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         !resourceDecision.mayRunIntensive) return;
     neuralExperimentBusy = true;
     try {
-      final split = (corpus.length * .8).floor();
+      final split = max(1, (corpus.length * .8).floor());
       final training = corpus.substring(0, split);
       final holdout = corpus.substring(split);
       final baseline = neuralCore.copy();
-      final baselineAccuracy = baseline.accuracy(holdout);
-      final nextHidden = neuralCore.proximaEtapa;
-      late NovaNeuralCore candidate;
-      late String kind;
-      if (nextHidden != null && evaluationCases.length >= 10) {
-        candidate = neuralCore.expandedCandidate(training, nextHidden);
-        kind = 'expansaoNeural';
-      } else {
-        candidate = neuralCore.candidate(training);
-        kind = 'aprendizadoNeural';
-      }
-      final candidateAccuracy = candidate.accuracy(holdout);
-      final accepted = nextHidden != null && evaluationCases.length >= 10
-          ? const NovaNeuralExpansionGate().qualifies(
-              baseline: baseline,
-              candidate: candidate,
-              baselineAccuracy: baselineAccuracy,
-              candidateAccuracy: candidateAccuracy,
-            )
-          : candidateAccuracy >= baselineAccuracy + 0.005;
-      final report = <String, dynamic>{
+      final before = await checkpointStore.save(
+        baseline,
+        label: 'Antes do laboratório neural',
+        accuracy: baseline.accuracy(holdout),
+      );
+      final result = neuralLab.run(
+        baseline: baseline,
+        training: training,
+        holdout: holdout,
+      );
+      final promoted = result.promotedModel;
+      final promotedScore = promoted == null
+          ? null
+          : result.candidates.firstWhere(
+              (score) => score.label == result.promotedLabel,
+              orElse: () => result.baseline,
+            );
+      generationReports.add({
         'at': DateTime.now().toUtc().toIso8601String(),
-        'kind': kind,
-        'generation': candidate.generation,
-        'generationPromoted': accepted,
-        'baselineAccuracy': baselineAccuracy,
-        'candidateAccuracy': candidateAccuracy,
-        'accuracy': candidateAccuracy,
-        'candidateParameters': candidate.parametros,
-        'baselineParameters': baseline.parametros,
-        'parametersGained': candidate.parametros - baseline.parametros,
-        'trainingPairs': candidate.trainingPairs,
-        'float32Bytes': candidate.bytesFloat32Estimados,
-        'int8BytesEstimate': candidate.bytesInt8Estimados,
-        'nextStageParameters': candidate.proximaEtapa == null
-            ? null
-            : NovaNeuralCore(hiddenSize: candidate.proximaEtapa!).parametros,
+        'kind': 'laboratorioNeural',
+        'generation': promoted?.generation ?? baseline.generation + 1,
+        'generationPromoted': promoted != null,
+        'baselineParameters': result.baseline.parameters,
+        'baselineActiveParameters': result.baseline.activeParameters,
+        'baselineAccuracy': result.baseline.accuracy,
+        'baselineLatencyUs': result.baseline.latencyUs,
+        'candidateCount': result.candidates.length,
+        'promoted': result.promotedLabel,
+        'candidateParameters': promotedScore?.parameters,
+        'candidateActiveParameters': promotedScore?.activeParameters,
+        'candidateAccuracy': promotedScore?.accuracy,
+        'candidateLatencyUs': promotedScore?.latencyUs,
         'evaluationCount': evaluationCases.length,
-      };
-      generationReports.add(report);
+        'checkpoint': before.toJson(),
+      });
       if (generationReports.length > 100) generationReports.removeAt(0);
-      if (accepted) {
-        neuralCore = candidate;
-        _recordMilestone(
-          'neural-' + candidate.generation.toString() + '-' + candidate.parametros.toString(),
-          'Modelo neural promovido',
-          candidate.parametros.toString() + ' parâmetros treináveis',
+      if (promoted != null) {
+        neuralCore = promoted;
+        final checkpoint = await checkpointStore.save(
+          neuralCore,
+          label: 'Geração promovida',
+          accuracy: promotedScore?.accuracy ?? 0,
         );
-      }
-      if (mounted) {
+        checkpoints
+          ..clear()
+          ..addAll(await checkpointStore.list());
+        _recordMilestone(
+          'neural-' + neuralCore.generation.toString() + '-' + neuralCore.parametros.toString(),
+          'Geração neural promovida',
+          neuralCore.parametros.toString() + ' parâmetros • ' +
+              neuralCore.neuronsActive.toString() + ' neurônios ativos por passo',
+        );
+        if (mounted) {
+          setState(() => mensagens.add({
+            'texto': 'Laboratório concluído. Modelo promovido: ' +
+                neuralCore.parametros.toString() + ' parâmetros, ' +
+                neuralCore.neuronsActive.toString() + ' neurônios ativos e acurácia ' +
+                ((promotedScore?.accuracy ?? 0) * 100).toStringAsFixed(1) +
+                '%. Checkpoint salvo: ' + checkpoint.id + '.',
+            'isSystem': true,
+          }));
+        }
+      } else if (mounted) {
         setState(() => mensagens.add({
-          'texto': 'Laboratório neural: ' + kind + '. Modelo ativo: ' +
-              neuralCore.parametros.toString() + ' parâmetros. ' +
-              'Acurácia do conjunto não treinado: ' +
-              (candidateAccuracy * 100).toStringAsFixed(1) + '%. ' +
-              (accepted
-                ? 'Candidato promovido.'
-                : 'Candidato preservado como experimento; modelo ativo mantido.'),
+          'texto': 'Laboratório concluído sem promoção. A NOVA preservou o modelo ativo e ' +
+              'registrou ' + result.candidates.length.toString() +
+              ' candidatos. Checkpoint-base: ' + before.id + '.',
           'isSystem': true,
         }));
       }
+      checkpoints
+        ..clear()
+        ..addAll(await checkpointStore.list());
     } finally {
       neuralExperimentBusy = false;
     }
