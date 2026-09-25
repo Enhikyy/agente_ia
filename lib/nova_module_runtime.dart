@@ -62,7 +62,7 @@ class NovaModule {
       switch (instruction['op']) {
         case 'normalize':
           value = value.toLowerCase().trim().replaceAll(
-              RegExp(r'\\s+'), ' ');
+              RegExp(r'\s+'), ' ');
           break;
         case 'replace':
           value = value.replaceAll(
