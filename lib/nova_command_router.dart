@@ -54,13 +54,17 @@ class NovaCommandRouter {
     if (const ['ajuda','help','comandos','o que voce consegue fazer'].contains(q)) {
       return const NovaCommand(NovaCommandKind.help);
     }
+    if (q == 'rode os testes' || q == 'executa os testes' || q == 'execute os testes' ||
+        q == 'rodar o diagnostico' || q == 'diagnostico completo') {
+      return const NovaCommand(NovaCommandKind.tests);
+    }
     if (const ['status','status da nova','como voce esta','como esta'].contains(q)) {
       return const NovaCommand(NovaCommandKind.status);
     }
     if (const ['testar','testes','teste','diagnostico completo','rodar testes'].contains(q)) {
       return const NovaCommand(NovaCommandKind.tests);
     }
-    if (q == 'recursos' || q == 'hardware') {
+    if (q == 'recursos' || q == 'hardware' || q == 'mostre os recursos') {
       return const NovaCommand(NovaCommandKind.resources);
     }
     if (q == 'evoluir' || q == 'nova geracao' || q == 'evolucao') {
@@ -81,7 +85,8 @@ class NovaCommandRouter {
     if (q == 'autonomia parar') {
       return const NovaCommand(NovaCommandKind.autonomyStop);
     }
-    if (q == 'backup' || q == 'congelar memoria' || q == 'salvar memoria') {
+    if (q == 'backup' || q == 'congelar memoria' || q == 'salvar memoria' ||
+        q == 'faca um backup' || q == 'faz um backup') {
       return const NovaCommand(NovaCommandKind.backup);
     }
     if (q == 'exportar diagnostico' || q == 'diagnostico') {
@@ -91,7 +96,8 @@ class NovaCommandRouter {
       return const NovaCommand(NovaCommandKind.refine);
     }
     if (q == 'rede neural' || q == 'rede' || q == 'sinapses' ||
-        q == 'ligacoes' || q == 'conexoes') {
+        q == 'ligacoes' || q == 'conexoes' || q == 'mostre a rede' ||
+        q == 'mostre a rede neural') {
       return const NovaCommand(NovaCommandKind.network);
     }
     if (q == 'plugins' || q == 'pacotes') {
@@ -100,6 +106,14 @@ class NovaCommandRouter {
     if (q.startsWith('pesquisar ')) {
       return NovaCommand(NovaCommandKind.research,
           argument: input.trim().substring(11).trim());
+    }
+    if (q.startsWith('procure ')) {
+      return NovaCommand(NovaCommandKind.research,
+          argument: input.trim().substring(8).trim());
+    }
+    if (q.startsWith('busque ')) {
+      return NovaCommand(NovaCommandKind.research,
+          argument: input.trim().substring(7).trim());
     }
     if (q.startsWith('pesquise ')) {
       return NovaCommand(NovaCommandKind.research,
