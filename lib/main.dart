@@ -1351,7 +1351,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   /// trained on. RAM is the serialized weight footprint, NOT process RSS.
   /// No promotion occurs without a valid 95% baseline and both 20% gains.
   Future<void> _runNeuralExperiment(String corpus) async {
-    if (neuralExperimentBusy || corpus.length < 2400 ||
+    if (neuralExperimentBusy || corpus.length < 800 ||
         !resourceDecision.mayRunIntensive) return;
     neuralExperimentBusy = true;
     try {
@@ -1359,68 +1359,71 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       final training = corpus.substring(0, split);
       final holdout = corpus.substring(split);
       final baseline = neuralCore.copy();
-      final candidate = NovaNeuralCore(width: 16)
-        ..generation = baseline.generation + 1;
-      // Train both from the same bounded corpus, preserving the active model.
-      baseline.train(training);
-      candidate.train(training);
-      int latency(NovaNeuralCore model) {
-        final timer = Stopwatch()..start();
-        for (var i = 0; i < 30; i++) { model.accuracy(holdout); }
-        timer.stop();
-        return max(1, timer.elapsedMicroseconds ~/ 30);
+      final baselineAccuracy = baseline.accuracy(holdout);
+      final nextHidden = neuralCore.proximaEtapa;
+      late NovaNeuralCore candidate;
+      late String kind;
+      if (nextHidden != null && evaluationCases.length >= 10) {
+        candidate = neuralCore.expandedCandidate(training, nextHidden);
+        kind = 'expansaoNeural';
+      } else {
+        candidate = neuralCore.candidate(training);
+        kind = 'aprendizadoNeural';
       }
-      final oldAccuracy = baseline.accuracy(holdout);
-      final newAccuracy = candidate.accuracy(holdout);
-      final oldLatency = latency(baseline);
-      final newLatency = latency(candidate);
-      final oldBytes = baseline.weights.length * 8;
-      final newBytes = candidate.weights.length * 8;
-      final accepted = oldAccuracy >= .95 && newAccuracy >= .95 &&
-          newAccuracy >= oldAccuracy &&
-          newLatency <= oldLatency * .8 &&
-          newBytes <= oldBytes * .8;
-      // Neural accuracy is next-symbol accuracy, NOT educational proficiency.
-      generationReports.add({
+      final candidateAccuracy = candidate.accuracy(holdout);
+      final accepted = nextHidden != null && evaluationCases.length >= 10
+          ? const NovaNeuralExpansionGate().qualifies(
+              baseline: baseline,
+              candidate: candidate,
+              baselineAccuracy: baselineAccuracy,
+              candidateAccuracy: candidateAccuracy,
+            )
+          : candidateAccuracy >= baselineAccuracy + 0.005;
+      final report = <String, dynamic>{
         'at': DateTime.now().toUtc().toIso8601String(),
-        'kind': 'neuralExperiment',
+        'kind': kind,
         'generation': candidate.generation,
         'generationPromoted': accepted,
-        'baselineAccuracy': oldAccuracy,
-        'candidateAccuracy': newAccuracy,
-        'baselineLatencyUs': oldLatency,
-        'candidateLatencyUs': newLatency,
-        'baselineWeightsBytes': oldBytes,
-        'candidateWeightsBytes': newBytes,
-        'holdoutCharacters': holdout.length,
-        'accuracy': newAccuracy,
-        'latencyUs': newLatency,
-        'memoryKb': (newBytes / 1024).ceil(),
-        'memoryMetric': 'weights-only',
-        'energy': null,
-      });
+        'baselineAccuracy': baselineAccuracy,
+        'candidateAccuracy': candidateAccuracy,
+        'accuracy': candidateAccuracy,
+        'candidateParameters': candidate.parametros,
+        'baselineParameters': baseline.parametros,
+        'parametersGained': candidate.parametros - baseline.parametros,
+        'trainingPairs': candidate.trainingPairs,
+        'float32Bytes': candidate.bytesFloat32Estimados,
+        'int8BytesEstimate': candidate.bytesInt8Estimados,
+        'nextStageParameters': candidate.proximaEtapa == null
+            ? null
+            : NovaNeuralCore(hiddenSize: candidate.proximaEtapa!).parametros,
+        'evaluationCount': evaluationCases.length,
+      };
+      generationReports.add(report);
       if (generationReports.length > 100) generationReports.removeAt(0);
-      // Do not mislabel weight bytes as measured process RAM. Even if
-      // accepted, promotion is limited to this data-only neural core.
-      // The incumbent continues learning even when evolution is rejected.
-      neuralCore = accepted ? candidate : baseline;
-      if (mounted) { setState(() => mensagens.add({
-        'texto': 'Experimento neural automático: '
-            '${(oldAccuracy * 100).toStringAsFixed(1)}% → '
-            '${(newAccuracy * 100).toStringAsFixed(1)}% '
-            'em ${holdout.length} caracteres não treinados. '
-            'Latência: $oldLatency → $newLatency µs; '
-            'pesos: $oldBytes → $newBytes bytes. '
-            '${accepted ? "Geração neural promovida." : "Candidata rejeitada; geração ativa preservada."} '
-            'RAM real e energia: não medidas.',
-        'isSystem': true,
-      })); }
+      if (accepted) {
+        neuralCore = candidate;
+        _recordMilestone(
+          'neural-' + candidate.generation.toString() + '-' + candidate.parametros.toString(),
+          'Modelo neural promovido',
+          candidate.parametros.toString() + ' parâmetros treináveis',
+        );
+      }
+      if (mounted) {
+        setState(() => mensagens.add({
+          'texto': 'Laboratório neural: ' + kind + '. Modelo ativo: ' +
+              neuralCore.parametros.toString() + ' parâmetros. ' +
+              'Acurácia do conjunto não treinado: ' +
+              (candidateAccuracy * 100).toStringAsFixed(1) + '%. ' +
+              (accepted
+                ? 'Candidato promovido.'
+                : 'Candidato preservado como experimento; modelo ativo mantido.'),
+          'isSystem': true,
+        }));
+      }
     } finally {
       neuralExperimentBusy = false;
     }
   }
-
-  /// Stage, benchmark and autonomously promote only with verified process PSS.
   Future<void> _stageAutonomousModule() async {
     if (!resourceDecision.mayRunIntensive) return;
     final directory = await getApplicationDocumentsDirectory();
