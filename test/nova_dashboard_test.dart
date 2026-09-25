@@ -17,7 +17,8 @@ void main() {
       onResearch: () {}, isReading: false,
       plugins: const [], onPlugin: (_) {},
       onRunTests: () {}, onAddEvaluation: () {}, onShowCommands: () {},
-      isThinking: false, milestones: const [],
+      isThinking: false, resourceState: 'pronto', resourceReason: 'teste', backgroundEnabled: false,
+      autonomousStudyEnabled: true, milestones: const [],
       onInstallLocal: () {}, onInstallUrl: () {},
     )));
     expect(find.text('G2'), findsWidgets);
