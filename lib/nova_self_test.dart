@@ -31,6 +31,21 @@ class NovaSelfTestReport {
     'failed': failedCount,
     'coverage': coverage,
   };
+
+  factory NovaSelfTestReport.fromJson(Object? raw) {
+    if (raw is! Map || raw['tests'] is! List) {
+      throw const FormatException('Invalid self-test report');
+    }
+    final tests = (raw['tests'] as List).whereType<Map>().map((item) =>
+      NovaSelfTest(
+        item['name']?.toString() ?? '',
+        item['passed'] == true,
+        item['detail']?.toString() ?? '',
+      )).toList();
+    final duration = (raw['durationMs'] as num?)?.toInt() ?? 0;
+    if (duration < 0) throw const FormatException('Invalid duration');
+    return NovaSelfTestReport(tests, duration);
+  }
 }
 
 /// On-device functional suite. These are software integrity tests, not a
