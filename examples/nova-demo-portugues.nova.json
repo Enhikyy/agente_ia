@@ -1,0 +1,11 @@
+{
+  "format": "nova-knowledge-v1",
+  "id": "nova-demo-portugues",
+  "name": "NOVA — Demonstração em português",
+  "description": "Pacote de exemplo com conhecimento introdutório, sem código executável.",
+  "documents": [
+    "A NOVA é um aplicativo experimental de aprendizado simbólico local. Ela armazena conceitos, experiências e relações entre palavras. As gerações são snapshots de compactação validados e não medem inteligência.",
+    "O formato nova-knowledge-v1 permite importar documentos de texto em pacotes JSON. Os arquivos podem ser distribuídos separadamente do APK e instalados na aba Plugins.",
+    "Para instalar um pacote remoto, confirme a origem do arquivo e compare o resumo SHA-256 divulgado pelo fornecedor com o valor solicitado pelo aplicativo."
+  ]
+}
