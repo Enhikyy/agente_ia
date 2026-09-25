@@ -7,12 +7,15 @@ import 'dart:math';
 class NovaNeuralCore {
   static const int vocabulario = 256;
   static const int dimensaoEntrada = 128;
-  static const int dimensaoInicial = 160;
-  static const int versao = 2;
-  static const List<int> etapas = <int>[160, 256, 512, 768, 1024, 1536, 2048];
+  static const int dimensaoInicial = 131;
+  static const int versao = 3;
+  static const List<int> etapas = <int>[64, 80, 96, 112, 131, 160, 192, 256, 384, 512, 768, 1024];
 
-  NovaNeuralCore({int hiddenSize = dimensaoInicial})
-      : hiddenSize = _validHidden(hiddenSize),
+  NovaNeuralCore({
+    int hiddenSize = dimensaoInicial,
+    int activeNeuronBudget = 24,
+  })  : hiddenSize = _validHidden(hiddenSize),
+        activeNeuronBudget = _validBudget(hiddenSize, activeNeuronBudget),
         embedding = _pesos(vocabulario * dimensaoEntrada),
         w1 = _pesos(dimensaoEntrada * hiddenSize),
         b1 = List<double>.filled(hiddenSize, 0),
@@ -24,6 +27,7 @@ class NovaNeuralCore {
   }
 
   final int hiddenSize;
+  int activeNeuronBudget;
   final List<double> embedding;
   final List<double> w1, b1, w2, b2, w3, b3;
   int trainingPairs = 0;
@@ -37,6 +41,60 @@ class NovaNeuralCore {
   }
 
   static List<double> _pesos(int count) => List<double>.filled(count, 0);
+
+  static int _validBudget(int hidden, int value) {
+    if (value < 4 || value > min(64, hidden)) {
+      throw ArgumentError.value(value, 'activeNeuronBudget',
+          'Orçamento de neurônios ativos fora do limite.');
+    }
+    return value;
+  }
+
+  List<int> _activeIndices(List<int> contexto) {
+    final wanted = min(activeNeuronBudget, hiddenSize);
+    final result = <int>[];
+    var seed = 17;
+    for (final byte in contexto) {
+      seed = (seed * 31 + byte) & 0x7fffffff;
+    }
+    for (var i = 0; result.length < wanted && i < hiddenSize * 6; i++) {
+      final index = ((seed + i * 104729 + i * i * 97) % hiddenSize).abs();
+      if (!result.contains(index)) result.add(index);
+    }
+    for (var i = 0; result.length < wanted; i++) {
+      final index = i % hiddenSize;
+      if (!result.contains(index)) result.add(index);
+    }
+    return result;
+  }
+
+  double _tanh(double value) {
+    if (value > 20) return 1;
+    if (value < -20) return -1;
+    final e = exp(value);
+    final n = exp(-value);
+    return (e - n) / (e + n);
+  }
+
+  int get parametros => embedding.length + w1.length + b1.length +
+      w2.length + b2.length + w3.length + b3.length;
+  int get bytesFloat32Estimados => parametros * 4;
+  int get bytesFloat64Atuais => parametros * 8;
+  int get bytesInt8Estimados => parametros;
+  int? get proximaEtapa {
+    final i = etapas.indexOf(hiddenSize);
+    if (i < 0 || i + 1 >= etapas.length) return null;
+    return etapas[i + 1];
+  }
+  double get sparsidade => 1 - activeNeuronBudget / hiddenSize;
+  int get parametrosAtivosEstimados {
+    const context = 16;
+    return context * dimensaoEntrada +
+        dimensaoEntrada * activeNeuronBudget +
+        activeNeuronBudget * activeNeuronBudget +
+        activeNeuronBudget * vocabulario +
+        activeNeuronBudget * 2 + vocabulario;
+  }
 
   void _inicializar() {
     for (var i = 0; i < embedding.length; i++) {
@@ -53,23 +111,15 @@ class NovaNeuralCore {
     }
   }
 
-  int get parametros => embedding.length + w1.length + b1.length +
-      w2.length + b2.length + w3.length + b3.length;
-
-  int get bytesFloat32Estimados => parametros * 4;
-  int get bytesFloat64Atuais => parametros * 8;
-  int get bytesInt8Estimados => parametros;
   String get modelo => 'NOVA Neural ${parametros} parâmetros';
 
-  int? get proximaEtapa {
-    final index = etapas.indexOf(hiddenSize);
-    if (index < 0 || index + 1 >= etapas.length) return null;
-    return etapas[index + 1];
-  }
-
-  String get estagio => hiddenSize == 160 ? 'Fundação 100 mil' :
-      hiddenSize < 512 ? 'Expansão inicial' :
-      hiddenSize < 1024 ? 'Expansão intermediária' : 'Expansão avançada';
+  String get estagio => hiddenSize == dimensaoInicial
+      ? 'Fundação • ~100 mil'
+      : hiddenSize < dimensaoInicial
+          ? 'Compressão estrutural'
+          : hiddenSize < 256
+              ? 'Expansão controlada'
+              : 'Expansão de capacidade';
 
   List<int> _bytes(String text) => utf8.encode(text);
 
@@ -83,24 +133,24 @@ class NovaNeuralCore {
         entrada[j] += embedding[base + j] / n;
       }
     }
-    for (var j = 0; j < hiddenSize; j++) {
+    final ativos = _activeIndices(contexto);
+    for (final j in ativos) {
       var sum = b1[j];
-      final base = j;
       for (var i = 0; i < dimensaoEntrada; i++) {
-        sum += entrada[i] * w1[i * hiddenSize + base];
+        sum += entrada[i] * w1[i * hiddenSize + j];
       }
-      h1[j] = tanh(sum);
+      h1[j] = _tanh(sum);
     }
-    for (var j = 0; j < hiddenSize; j++) {
+    for (final j in ativos) {
       var sum = b2[j];
-      for (var i = 0; i < hiddenSize; i++) {
+      for (final i in ativos) {
         sum += h1[i] * w2[i * hiddenSize + j];
       }
-      h2[j] = tanh(sum);
+      h2[j] = _tanh(sum);
     }
     for (var o = 0; o < vocabulario; o++) {
       var sum = b3[o];
-      for (var i = 0; i < hiddenSize; i++) {
+      for (final i in ativos) {
         sum += h2[i] * w3[i * vocabulario + o];
       }
       logits[o] = sum;
@@ -129,6 +179,7 @@ class NovaNeuralCore {
       final end = step + 1;
       final start = max(0, end - 16);
       final contexto = bytes.sublist(start, end);
+      final ativos = _activeIndices(contexto);
       _ativacao(contexto, h1, h2, logits);
       var peak = logits[0];
       for (var i = 1; i < vocabulario; i++) {
@@ -144,35 +195,28 @@ class NovaNeuralCore {
         probs[i] *= inv;
       }
       final target = bytes[end];
-      for (var i = 0; i < hiddenSize; i++) d2[i] = 0;
+      d2.fillRange(0, hiddenSize, 0);
       for (var o = 0; o < vocabulario; o++) {
         final d3 = (o == target ? 1.0 : 0.0) - probs[o];
-        final base = o;
-        for (var i = 0; i < hiddenSize; i++) {
-          d2[i] += d3 * w3[i * vocabulario + base];
-        }
-        for (var i = 0; i < hiddenSize; i++) {
-          w3[i * vocabulario + base] += learningRate * d3 * h2[i];
+        for (final i in ativos) {
+          d2[i] += d3 * w3[i * vocabulario + o];
+          w3[i * vocabulario + o] += learningRate * d3 * h2[i];
         }
         b3[o] += learningRate * d3;
       }
-      for (var i = 0; i < hiddenSize; i++) {
-        d2[i] *= (1 - h2[i] * h2[i]);
-      }
-      for (var i = 0; i < hiddenSize; i++) {
-        d1[i] = 0;
-        for (var j = 0; j < hiddenSize; j++) {
+      for (final i in ativos) d2[i] *= (1 - h2[i] * h2[i]);
+      d1.fillRange(0, hiddenSize, 0);
+      for (final i in ativos) {
+        for (final j in ativos) {
           d1[i] += d2[j] * w2[i * hiddenSize + j];
         }
       }
-      for (var i = 0; i < hiddenSize; i++) {
-        for (var j = 0; j < hiddenSize; j++) {
+      for (final i in ativos) {
+        for (final j in ativos) {
           w2[i * hiddenSize + j] += learningRate * d2[j] * h1[i];
         }
-      }
-      for (var j = 0; j < hiddenSize; j++) {
-        b2[j] += learningRate * d2[j];
-        d1[j] *= (1 - h1[j] * h1[j]);
+        b2[i] += learningRate * d2[i];
+        d1[i] *= (1 - h1[i] * h1[i]);
       }
       final n = max(1, contexto.length);
       final entrada = List<double>.filled(dimensaoEntrada, 0);
@@ -184,16 +228,13 @@ class NovaNeuralCore {
       }
       for (var i = 0; i < dimensaoEntrada; i++) {
         var grad = 0.0;
-        for (var j = 0; j < hiddenSize; j++) {
+        for (final j in ativos) {
           grad += d1[j] * w1[i * hiddenSize + j];
+          w1[i * hiddenSize + j] += learningRate * d1[j] * entrada[i];
         }
         for (final token in contexto) {
           embedding[token * dimensaoEntrada + i] +=
               learningRate * grad / n;
-        }
-        for (var j = 0; j < hiddenSize; j++) {
-          w1[i * hiddenSize + j] +=
-              learningRate * d1[j] * entrada[i];
         }
       }
       trainingPairs++;
@@ -240,8 +281,11 @@ class NovaNeuralCore {
     return utf8.decode(result, allowMalformed: true);
   }
 
-  NovaNeuralCore copy() {
-    final result = NovaNeuralCore(hiddenSize: hiddenSize);
+  NovaNeuralCore copy({int? activeNeuronBudget}) {
+    final result = NovaNeuralCore(
+      hiddenSize: hiddenSize,
+      activeNeuronBudget: activeNeuronBudget ?? this.activeNeuronBudget,
+    );
     result.embedding.setAll(0, embedding);
     result.w1.setAll(0, w1);
     result.b1.setAll(0, b1);
@@ -254,15 +298,23 @@ class NovaNeuralCore {
     return result;
   }
 
-  NovaNeuralCore candidate(String trainingText, {double rate = 0.025}) {
-    final result = copy()..generation = generation + 1;
+  NovaNeuralCore candidate(String trainingText, {
+    double rate = 0.025,
+    int? activeNeuronBudget,
+  }) {
+    final result = copy(activeNeuronBudget: activeNeuronBudget)
+      ..generation = generation + 1;
     result.train(trainingText, learningRate: rate, maxExamples: 64);
     return result;
   }
 
-  NovaNeuralCore expandedCandidate(String trainingText, int targetHidden,
-      {double rate = 0.02}) {
-    final target = NovaNeuralCore(hiddenSize: targetHidden)
+  NovaNeuralCore resizedCandidate(String trainingText, int targetHidden,
+      {double rate = 0.02, int? activeNeuronBudget}) {
+    final budget = min(activeNeuronBudget ?? this.activeNeuronBudget, targetHidden);
+    final target = NovaNeuralCore(
+      hiddenSize: targetHidden,
+      activeNeuronBudget: budget,
+    )
       ..generation = generation + 1;
     final overlap = min(hiddenSize, targetHidden);
     target.embedding.setAll(0, embedding);
@@ -287,12 +339,18 @@ class NovaNeuralCore {
     return target;
   }
 
+  NovaNeuralCore expandedCandidate(String trainingText, int targetHidden,
+      {double rate = 0.02, int? activeNeuronBudget}) =>
+      resizedCandidate(trainingText, targetHidden,
+        rate: rate, activeNeuronBudget: activeNeuronBudget);
+
   Map<String, dynamic> toJson() => {
-    'format': 'nova-neural-mlp',
+    'format': 'nova-neural-mlp-sparse',
     'version': versao,
     'vocabulario': vocabulario,
     'dimensaoEntrada': dimensaoEntrada,
     'hiddenSize': hiddenSize,
+    'activeNeuronBudget': activeNeuronBudget,
     'generation': generation,
     'trainingPairs': trainingPairs,
     'embedding': embedding, 'w1': w1, 'b1': b1,
@@ -300,14 +358,18 @@ class NovaNeuralCore {
   };
 
   factory NovaNeuralCore.fromJson(Object? raw) {
-    if (raw is! Map || raw['format'] != 'nova-neural-mlp' ||
+    if (raw is! Map || raw['format'] != 'nova-neural-mlp-sparse' ||
         raw['version'] != versao || raw['hiddenSize'] is! int) {
       // Estado neural antigo é incompatível com a nova arquitetura.
       // A memória textual permanece intacta no arquivo principal.
       return NovaNeuralCore();
     }
     final hidden = raw['hiddenSize'] as int;
-    final result = NovaNeuralCore(hiddenSize: hidden);
+    final budget = raw['activeNeuronBudget'] is int
+        ? raw['activeNeuronBudget'] as int
+        : min(24, hidden);
+    final result = NovaNeuralCore(hiddenSize: hidden,
+      activeNeuronBudget: budget);
     void restore(List<double> target, Object? value) {
       if (value is! List || value.length != target.length) {
         throw const FormatException('Dimensões neurais inválidas');
