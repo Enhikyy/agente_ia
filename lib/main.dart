@@ -1,3 +1,4 @@
+import 'nova_neural_core.dart';
 import 'nova_diagnostics.dart';
 import 'nova_autonomy_policy.dart';
 import 'nova_education_assessment.dart';
@@ -277,6 +278,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   String researchStage = "";
   int lastResearchMs = 0;
   final List<Map<String, dynamic>> generationReports = [];
+  NovaNeuralCore neuralCore = NovaNeuralCore();
+  bool neuralExperimentBusy = false;
   final List<int> responseSamplesMs = [];
   final List<Map<String, String>> evaluationCases = [];
   double get averageResponseMs => responseSamplesMs.isEmpty ? 0 :
@@ -379,7 +382,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     try {
       if (!memoryReady) return;
       final temporario = File('${arquivoMemoria.path}.tmp');
-      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens, 'milestones': milestones.map((e) => e.toJson()).toList(), 'generationReports': generationReports, 'responseSamplesMs': responseSamplesMs, 'evaluationCases': evaluationCases, 'retrievalThreshold': retrievalThreshold, 'backgroundEnabled': backgroundEnabled, 'resourceSamples': resourceSamples, 'autoRefine': autoRefine, 'autonomyPolicy': autonomyPolicy.toJson(), 'autonomousStudyEnabled': autonomousStudyEnabled, 'schoolLessonsCompleted': schoolLessonsCompleted, 'postgraduateSessions': postgraduateSessions, 'educationAssessments': educationAssessments.map((a) => a.toJson()).toList(), 'lastAutonomousStudy': lastAutonomousStudy?.toIso8601String()}), flush: true);
+      await temporario.writeAsString(json.encode({'core': json.decode(cerebroMatriz.gerarPacoteCriogenico()), 'language': linguagem.exportState(), 'evolution': evolucao.exportState(), 'appearance': appearance.toJson(), 'createdAt': createdAt.toIso8601String(), 'messages': mensagens, 'milestones': milestones.map((e) => e.toJson()).toList(), 'generationReports': generationReports, 'neuralCore': neuralCore.toJson(), 'responseSamplesMs': responseSamplesMs, 'evaluationCases': evaluationCases, 'retrievalThreshold': retrievalThreshold, 'backgroundEnabled': backgroundEnabled, 'resourceSamples': resourceSamples, 'autoRefine': autoRefine, 'autonomyPolicy': autonomyPolicy.toJson(), 'autonomousStudyEnabled': autonomousStudyEnabled, 'schoolLessonsCompleted': schoolLessonsCompleted, 'postgraduateSessions': postgraduateSessions, 'educationAssessments': educationAssessments.map((a) => a.toJson()).toList(), 'lastAutonomousStudy': lastAutonomousStudy?.toIso8601String()}), flush: true);
       if (await arquivoMemoria.exists()) {
         final anterior = File('${arquivoMemoria.path}.bak');
         await arquivoMemoria.copy(anterior.path);
@@ -569,6 +572,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             if (pacote['resourceSamples'] is List) {
               resourceSamples.addAll((pacote['resourceSamples'] as List)
                 .whereType<Map>().map((r) => Map<String, dynamic>.from(r)).take(500));
+            }
+            if (pacote['neuralCore'] != null) {
+              try { neuralCore = NovaNeuralCore.fromJson(pacote['neuralCore']); }
+              on FormatException { neuralCore = NovaNeuralCore(); }
             }
             if (pacote['generationReports'] is List) {
               generationReports.addAll((pacote['generationReports'] as List)
@@ -1047,6 +1054,78 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     }
   }
 
+  /// Autonomous, data-only neural experiments. The held-out tail is never
+  /// trained on. RAM is the serialized weight footprint, NOT process RSS.
+  /// No promotion occurs without a valid 95% baseline and both 20% gains.
+  Future<void> _runNeuralExperiment(String corpus) async {
+    if (neuralExperimentBusy || corpus.length < 2400 ||
+        !resourceDecision.mayRunIntensive) return;
+    neuralExperimentBusy = true;
+    try {
+      final split = (corpus.length * .8).floor();
+      final training = corpus.substring(0, split);
+      final holdout = corpus.substring(split);
+      final baseline = neuralCore.copy();
+      final candidate = NovaNeuralCore(width: 16)
+        ..generation = baseline.generation + 1;
+      // Train both from the same bounded corpus, preserving the active model.
+      baseline.train(training);
+      candidate.train(training);
+      int latency(NovaNeuralCore model) {
+        final timer = Stopwatch()..start();
+        for (var i = 0; i < 30; i++) { model.accuracy(holdout); }
+        timer.stop();
+        return max(1, timer.elapsedMicroseconds ~/ 30);
+      }
+      final oldAccuracy = baseline.accuracy(holdout);
+      final newAccuracy = candidate.accuracy(holdout);
+      final oldLatency = latency(baseline);
+      final newLatency = latency(candidate);
+      final oldBytes = baseline.weights.length * 8;
+      final newBytes = candidate.weights.length * 8;
+      final accepted = oldAccuracy >= .95 && newAccuracy >= .95 &&
+          newAccuracy >= oldAccuracy &&
+          newLatency <= oldLatency * .8 &&
+          newBytes <= oldBytes * .8;
+      // Neural accuracy is next-symbol accuracy, NOT educational proficiency.
+      generationReports.add({
+        'at': DateTime.now().toUtc().toIso8601String(),
+        'kind': 'neuralExperiment',
+        'generation': candidate.generation,
+        'generationPromoted': accepted,
+        'baselineAccuracy': oldAccuracy,
+        'candidateAccuracy': newAccuracy,
+        'baselineLatencyUs': oldLatency,
+        'candidateLatencyUs': newLatency,
+        'baselineWeightsBytes': oldBytes,
+        'candidateWeightsBytes': newBytes,
+        'holdoutCharacters': holdout.length,
+        'accuracy': newAccuracy,
+        'latencyUs': newLatency,
+        'memoryKb': (newBytes / 1024).ceil(),
+        'memoryMetric': 'weights-only',
+        'energy': null,
+      });
+      if (generationReports.length > 100) generationReports.removeAt(0);
+      // Do not mislabel weight bytes as measured process RAM. Even if
+      // accepted, promotion is limited to this data-only neural core.
+      if (accepted) neuralCore = candidate;
+      if (mounted) setState(() => mensagens.add({
+        'texto': 'Experimento neural automático: '
+            '${(oldAccuracy * 100).toStringAsFixed(1)}% → '
+            '${(newAccuracy * 100).toStringAsFixed(1)}% '
+            'em ${holdout.length} caracteres não treinados. '
+            'Latência: $oldLatency → $newLatency µs; '
+            'pesos: $oldBytes → $newBytes bytes. '
+            '${accepted ? "Geração neural promovida." : "Candidata rejeitada; geração ativa preservada."} '
+            'RAM real e energia: não medidas.',
+        'isSystem': true,
+      }));
+    } finally {
+      neuralExperimentBusy = false;
+    }
+  }
+
   Future<void> _autonomousStudy() async {
     if (!mounted || !memoryReady || !autonomousStudyEnabled || researching ||
         isLendo || isThinking || !autonomyPolicy.canResearchScheduled) return;
@@ -1072,6 +1151,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         linguagem.learnDocument('${page.title}. ${page.extract}', source: page.url);
         evolucao.observe('${page.title}. ${page.extract}');
       }
+      await _runNeuralExperiment(result.pages.map((page) =>
+          '${page.title}. ${page.extract}').join('\\n'));
       if (universityGraduated) postgraduateSessions++;
       schoolLessonsCompleted++;
       setState(() => mensagens.add({
