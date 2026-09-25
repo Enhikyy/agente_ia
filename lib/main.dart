@@ -844,7 +844,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       isCarregando = false;
       if (mensagens.isEmpty) {
         mensagens.add({
-        "texto": "NOVA local ativa. Memória simbólica disponível; modelo neural ainda não instalado.", 
+        "texto": "NOVA local ativa. Memória local disponível; modelo neural de 100 mil parâmetros pronto para evolução.", 
         "isSystem": true
         });
       }
@@ -1567,6 +1567,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       connections: evolucao.connections,
       synapses: synapseCount,
       neuralTrainingPairs: neuralCore.trainingPairs,
+      neuralParameters: neuralCore.parametros,
+      neuralModel: neuralCore.modelo,
       neuralEntropy: cerebroMatriz.entropiaNeural,
       evaluationCount: evaluationCases.length,
       evaluationAccuracy: evaluationAccuracy,
