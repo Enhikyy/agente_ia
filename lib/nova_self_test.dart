@@ -109,7 +109,7 @@ class NovaSelfTestSuite {
       final model = NovaNeuralCore()..train('nova neural' * 40);
       final restored = NovaNeuralCore.fromJson(model.toJson());
       return restored.trainingPairs == model.trainingPairs &&
-          restored.weights.length == model.weights.length;
+          restored.parametros == model.parametros;
     });
 
     test('Rede: módulo normalize', () {
