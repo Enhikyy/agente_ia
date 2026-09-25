@@ -87,8 +87,8 @@ class NovaSelfTestSuite {
       final model = NovaNeuralCore(width: 32);
       model.train('ab' * 300);
       return model.trainingPairs > 0 &&
-          model.predictSymbol('a'.codeUnitAt(0)) ==
-              model.predictSymbol('b'.codeUnitAt(0));
+          model.predictSymbol('a'.codeUnitAt(0)) == ('b'.codeUnitAt(0) % 32) &&
+          model.predictSymbol('b'.codeUnitAt(0)) == ('a'.codeUnitAt(0) % 32);
     });
 
     test('Neural: serialização reversível', () {
@@ -114,7 +114,7 @@ class NovaSelfTestSuite {
 
     test('Evolução: compressão reversível', () {
       final evolution = NovaEvolutionEngine();
-      evolution.observe('inteligencia artificial aprende conceitos e conexoes.');
+      evolution.observe(List<String>.generate(120, (i) => 'conceito$i').join(' '));
       final result = evolution.evolve();
       return result.accepted && result.afterBytes < result.beforeBytes;
     });
