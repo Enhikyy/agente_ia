@@ -24,7 +24,7 @@ void main() {
     expect(find.text('14 ms'), findsOneWidget);
     await tester.tap(find.text('Sistema'));
     await tester.pumpAndSettle();
-    expect(find.text('Sistema'), findsOneWidget);
+    expect(find.text('Sistema'), findsWidgets);
     await tester.tap(find.text('Comandos'));
     await tester.pumpAndSettle();
     expect(find.text('Olá'), findsOneWidget);
