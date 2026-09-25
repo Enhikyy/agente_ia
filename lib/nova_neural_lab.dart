@@ -135,6 +135,17 @@ class NovaNeuralLab {
     }
     String? promoted;
     NovaNeuralCore? promotedModel;
+    final byLabel = <String, NovaNeuralCore>{};
+    for (var i = 0; i < models.length; i++) {
+      final model = models[i];
+      final kind = model.parametros < baseline.parametros
+          ? 'Compactação '
+          : 'Expansão ';
+      final score = benchmark(kind + model.parametros.toString() + 'p',
+        model, holdout);
+      scores.add(score);
+      byLabel[score.label] = model;
+    }
     for (final score in scores) {
       final faster = score.latencyUs <= base.latencyUs * 0.8;
       final smaller = score.parameters <= base.parameters;
@@ -142,16 +153,13 @@ class NovaNeuralLab {
       if (faster && smaller && precise) {
         if (promoted == null) {
           promoted = score.label;
-          promotedModel = models[scores.length];
         } else {
           final current = scores.firstWhere((item) => item.label == promoted);
-          if (_better(score, current)) {
-            promoted = score.label;
-            promotedModel = models[scores.indexOf(score)];
-          }
+          if (_better(score, current)) promoted = score.label;
         }
       }
     }
+    promotedModel = promoted == null ? null : byLabel[promoted];
     return NovaNeuralLabResult(
       baseline: base,
       candidates: scores,
