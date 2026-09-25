@@ -71,7 +71,8 @@ class NovaDashboard extends StatefulWidget {
     required this.isThinking, required this.milestones,
     required this.onInstallLocal, required this.onInstallUrl,
     this.researchProgress = 0, this.researchStage = '',
-    this.researchMs = 0, this.researching = false});
+    this.researchMs = 0, this.researching = false,
+    this.generationReports = const [], this.resourceSamples = const []});
   final NovaAppearance appearance;
   final int generation, concepts, experiences, responseMs;
   final Duration age;
@@ -91,6 +92,7 @@ class NovaDashboard extends StatefulWidget {
   final String researchStage;
   final int researchMs;
   final List<NovaMilestone> milestones;
+  final List<Map<String, dynamic>> generationReports, resourceSamples;
   final List<String> plugins;
   final ValueChanged<String> onPlugin;
   final VoidCallback onInstallLocal, onInstallUrl;
@@ -346,6 +348,9 @@ class _NovaDashboardState extends State<NovaDashboard> {
       const SizedBox(height: 14),
       panel(NovaGenerationTree(events: widget.milestones,
         currentGeneration: widget.generation, color: accent)),
+      const SizedBox(height: 14),
+      NovaBenchmarkPanel(reports: widget.generationReports,
+        resourceSamples: widget.resourceSamples, accent: accent),
     ]);
 
   Widget _plugins(Color accent) => ListView(
@@ -502,4 +507,111 @@ class _NovaDashboardState extends State<NovaDashboard> {
         icon: const Icon(Icons.backup_outlined),
         label: const Text('Salvar backup local')),
     ]);
+}
+
+
+/// Real recorded measurements only. Missing energy and RAM benchmarks remain N/A.
+class NovaBenchmarkPanel extends StatelessWidget {
+  const NovaBenchmarkPanel({super.key, required this.reports,
+    required this.resourceSamples, required this.accent});
+  final List<Map<String, dynamic>> reports, resourceSamples;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = reports.where((r) => r['generationPromoted'] == true ||
+      r['holdoutBefore'] is num).toList().reversed.take(12).toList().reversed.toList();
+    Widget metric(String title, String value) => Expanded(child: Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: const Color(0xFF151B2B),
+        borderRadius: BorderRadius.circular(14)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(title, style: const TextStyle(color: Color(0xFF9BA6BE), fontSize: 11)),
+        const SizedBox(height: 8),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold,
+          fontSize: 17)),
+      ])));
+    final last = rows.isEmpty ? null : rows.last;
+    final accuracy = last?['accuracy'] ?? last?['holdoutAfter'];
+    final latency = last?['latencyUs'];
+    final ram = last?['memoryKb'];
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('BENCHMARK POR GERAÇÃO', style: TextStyle(
+        fontWeight: FontWeight.w700, letterSpacing: 1.1)),
+      const SizedBox(height: 5),
+      const Text('Resultados registrados, não estimativas de inteligência.',
+        style: TextStyle(color: Color(0xFF9BA6BE), fontSize: 12)),
+      const SizedBox(height: 12),
+      Row(children: [
+        metric('Precisão', accuracy is num ?
+          '${(accuracy * 100).toStringAsFixed(1)}%' : 'N/D'),
+        const SizedBox(width: 8),
+        metric('Latência', latency is num ? '${latency} µs' : 'N/D'),
+      ]),
+      const SizedBox(height: 8),
+      Row(children: [
+        metric('RAM medida', ram is num ? '${ram} KB' : 'N/D'),
+        const SizedBox(width: 8),
+        metric('Energia / geração', 'N/D'),
+      ]),
+      const SizedBox(height: 14),
+      if (rows.isEmpty) const Text('Nenhum benchmark de geração registrado.',
+        style: TextStyle(color: Color(0xFF9BA6BE)))
+      else ...[
+        const Text('Histórico de precisão', style: TextStyle(fontSize: 13)),
+        const SizedBox(height: 8),
+        SizedBox(height: 110, child: CustomPaint(
+          painter: _NovaAccuracyPainter(rows, accent),
+          child: const SizedBox.expand())),
+        const SizedBox(height: 8),
+        ...rows.reversed.take(5).map((r) {
+          final a = r['accuracy'] ?? r['holdoutAfter'];
+          final speed = r['latencyUs'];
+          final memory = r['memoryKb'];
+          return ListTile(dense: true, contentPadding: EdgeInsets.zero,
+            title: Text(r['generationPromoted'] == true ?
+              'Geração promovida' : 'Teste de parâmetros'),
+            subtitle: Text('Precisão: ${a is num ? '${(a * 100).toStringAsFixed(1)}%' : 'N/D'} · '
+              'Latência: ${speed is num ? '${speed} µs' : 'N/D'} · '
+              'RAM: ${memory is num ? '${memory} KB' : 'N/D'}'));
+        }),
+      ],
+      const SizedBox(height: 8),
+      Text('Leituras de recursos: ${resourceSamples.length}. '
+        'Memória livre do aparelho não equivale ao consumo da geração.',
+        style: const TextStyle(color: Color(0xFF9BA6BE), fontSize: 11)),
+    ]);
+  }
+}
+
+class _NovaAccuracyPainter extends CustomPainter {
+  const _NovaAccuracyPainter(this.reports, this.accent);
+  final List<Map<String, dynamic>> reports;
+  final Color accent;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final values = reports.map((r) => r['accuracy'] ?? r['holdoutAfter'])
+      .whereType<num>().map((v) => v.toDouble()).where((v) => v >= 0 && v <= 1)
+      .toList();
+    if (values.isEmpty) return;
+    final grid = Paint()..color = Colors.white24..strokeWidth = 1;
+    for (var i = 0; i <= 4; i++) {
+      final y = size.height * i / 4;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
+    }
+    final line = Paint()..color = accent..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke;
+    final path = Path();
+    for (var i = 0; i < values.length; i++) {
+      final x = values.length == 1 ? size.width / 2 :
+        i * size.width / (values.length - 1);
+      final y = (1 - values[i]) * size.height;
+      if (i == 0) { path.moveTo(x, y); } else { path.lineTo(x, y); }
+      canvas.drawCircle(Offset(x, y), 3, Paint()..color = accent);
+    }
+    canvas.drawPath(path, line);
+  }
+  @override
+  bool shouldRepaint(covariant _NovaAccuracyPainter old) =>
+    old.reports != reports || old.accent != accent;
 }
