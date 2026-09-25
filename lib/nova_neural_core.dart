@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 
 /// Núcleo neural treinável da NOVA, projetado para crescer por etapas.
-/// A primeira arquitetura possui 100.384 parâmetros treináveis.
+/// A primeira arquitetura possui 100.104 parâmetros treináveis.
 /// O modelo trabalha em bytes UTF-8 e aprende previsão do próximo byte.
 class NovaNeuralCore {
   static const int vocabulario = 256;
@@ -274,7 +274,7 @@ class NovaNeuralCore {
     if (maxBytes < 1 || maxBytes > 1024) {
       throw ArgumentError.value(maxBytes, 'maxBytes');
     }
-    final result = _bytes(prompt);
+    final result = List<int>.from(_bytes(prompt));
     for (var i = 0; i < maxBytes; i++) {
       final next = predictByte(result);
       result.add(next);
