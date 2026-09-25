@@ -130,6 +130,10 @@ class NovaDashboard extends StatefulWidget {
     this.milestones = const [],
     this.isReading = false,
     this.isThinking = false,
+    this.resourceState = 'indisponível',
+    this.resourceReason = '',
+    this.backgroundEnabled = false,
+    this.autonomousStudyEnabled = true,
   });
 
   final NovaAppearance appearance;
@@ -147,7 +151,8 @@ class NovaDashboard extends StatefulWidget {
   final VoidCallback onImport, onBackup, onEvolve, onAppearance, onResearch;
   final VoidCallback? onDiagnostics, onCheckUpdates, onUpdate, onRefine,
       onSetSupervisedAutonomy;
-  final bool supervisedAutonomyConfigured;
+  final bool supervisedAutonomyConfigured, backgroundEnabled, autonomousStudyEnabled;
+  final String resourceState, resourceReason;
   final int? availableUpdateBuild;
   final bool checkingUpdates, isReading, isThinking, researching;
   final double researchProgress;
@@ -833,6 +838,28 @@ class _NovaDashboardState extends State<NovaDashboard>
         _row('Executar laboratório', 'Testar compactação e velocidade', Icons.science_outlined, widget.onEvolve),
         _row('Pesquisa', 'Pesquisar e incorporar conteúdo', Icons.search_outlined, widget.onResearch),
         if (widget.onRefine != null) _row('Refinar recuperação', 'Otimizar o limiar com holdout', Icons.tune_outlined, widget.onRefine),
+      ])),
+      const SizedBox(height: 11),
+      card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        section('estado do aparelho'),
+        const SizedBox(height: 8),
+        Row(children: [
+          Icon(Icons.memory_rounded, color: accent, size: 18),
+          const SizedBox(width: 8),
+          Expanded(child: Text(widget.resourceState + ' • ' + widget.resourceReason,
+            style: const TextStyle(fontSize: 10.5, color: dim))),
+        ]),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          OutlinedButton.icon(
+            onPressed: () => widget.onSend(widget.backgroundEnabled ? 'autonomia parar' : 'autonomia iniciar'),
+            icon: Icon(widget.backgroundEnabled ? Icons.pause_circle_outline : Icons.play_circle_outline, size: 16),
+            label: Text(widget.backgroundEnabled ? 'Autonomia: parar' : 'Autonomia: iniciar')),
+          OutlinedButton.icon(
+            onPressed: () => widget.onSend(widget.autonomousStudyEnabled ? 'estudo autônomo parar' : 'estudo autônomo iniciar'),
+            icon: Icon(widget.autonomousStudyEnabled ? Icons.school_outlined : Icons.school_rounded, size: 16),
+            label: Text(widget.autonomousStudyEnabled ? 'Estudo: parar' : 'Estudo: iniciar')),
+        ]),
       ])),
       const SizedBox(height: 11),
       card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
