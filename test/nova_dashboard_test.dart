@@ -33,8 +33,9 @@ void main() {
     await tester.tap(find.text('Sistema'));
     await tester.pump(const Duration(milliseconds: 120));
     expect(find.text('Sistema'), findsWidgets);
-    await tester.tap(find.text('Comandos'));
+    await tester.tap(find.text('Núcleo'));
     await tester.pump(const Duration(milliseconds: 120));
     expect(find.text('Olá'), findsOneWidget);
+    expect(find.text('CONVERSA'), findsOneWidget);
   });
 }
