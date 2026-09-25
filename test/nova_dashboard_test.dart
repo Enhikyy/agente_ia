@@ -5,7 +5,6 @@ import 'package:agente_ia/nova_dashboard.dart';
 void main() {
   testWidgets('dashboard navigation and appearance controls work', (tester) async {
     final appearance = NovaAppearance();
-    var saved = 0;
     await tester.pumpWidget(MaterialApp(home: NovaDashboard(
       appearance: appearance, generation: 2, concepts: 35,
       experiences: 12, connections: 18, synapses: 32,
@@ -14,9 +13,10 @@ void main() {
       messages: const [{'texto': 'Olá', 'isSystem': true}],
       input: TextEditingController(), scroll: ScrollController(),
       onSend: (_) {}, onImport: () {}, onBackup: () {},
-      onEvolve: () {}, onAppearance: () => saved++,
+      onEvolve: () {}, onAppearance: () {},
       onResearch: () {}, isReading: false,
       plugins: const [], onPlugin: (_) {},
+      onRunTests: () {}, onAddEvaluation: () {}, onShowCommands: () {},
       isThinking: false, milestones: const [],
       onInstallLocal: () {}, onInstallUrl: () {},
     )));
