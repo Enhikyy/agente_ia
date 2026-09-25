@@ -423,6 +423,28 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     } catch (_) {}
   }
 
+  Future<void> _evolveNeuralNow() async {
+    final state = linguagem.exportState();
+    final memories = state['memories'] is List ? state['memories'] as List : <dynamic>[];
+    final parts = memories.whereType<Map>().map((item) =>
+      item['text']?.toString() ?? '').where((text) => text.length > 10).toList();
+    final corpus = parts.join('\n');
+    if (corpus.length < 800) {
+      if (mounted) setState(() => mensagens.add({
+        'texto': 'Ainda há pouco material para uma evolução neural. '
+            'Importe documentos ou pesquise um tema antes de evoluir.',
+        'isSystem': true,
+      }));
+      return;
+    }
+    await _runNeuralExperiment(corpus.length > 120000 ? corpus.substring(0, 120000) : corpus);
+    if (mounted) setState(() => mensagens.add({
+      'texto': 'Ciclo de evolução concluído. O núcleo neural atual está em '
+          '${neuralCore.parametros} parâmetros; a próxima expansão disponível '
+          'é ${neuralCore.proximaEtapa ?? 'nenhuma'}.' ,
+      'isSystem': true,
+    }));
+  }
   Future<void> _runFunctionalTests() async {
     if (mounted) {
       setState(() => statusPensamento = 'Executando diagnóstico…');
@@ -927,6 +949,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           'texto': 'Estudo autônomo desativado.', 'isSystem': true}));
         return;
       case NovaCommandKind.evolve:
+        await _evolveNeuralNow();
+        return;
       case NovaCommandKind.backup:
       case NovaCommandKind.diagnostics:
       case NovaCommandKind.refine:
