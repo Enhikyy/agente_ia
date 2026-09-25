@@ -779,9 +779,9 @@ class _NovaDashboardState extends State<NovaDashboard> with TickerProviderStateM
         resourceBadge(),
         const SizedBox(height: 8),
         setting('Estudo autônomo', widget.autonomousStudyEnabled ? 'Ativo' : 'Pausado', widget.autonomousStudyEnabled ? Icons.pause_circle_outline_rounded : Icons.play_circle_outline_rounded,
-          () => widget.onSend(widget.autonomousStudyEnabled ? 'parar estudo autonomo' : 'estudar autonomamente')),
+          () => widget.onSend(widget.autonomousStudyEnabled ? 'estudo autonomo parar' : 'estudo autonomo iniciar')),
         setting('Segundo plano', widget.backgroundEnabled ? 'Ativo' : 'Inativo', widget.backgroundEnabled ? Icons.stop_circle_outlined : Icons.play_arrow_rounded,
-          () => widget.onSend(widget.backgroundEnabled ? 'parar modo em segundo plano' : 'iniciar modo em segundo plano')),
+          () => widget.onSend(widget.backgroundEnabled ? 'autonomia parar' : 'autonomia iniciar')),
       ])),
     ],
   );
