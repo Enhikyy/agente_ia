@@ -123,7 +123,8 @@ class NovaDashboard extends StatefulWidget {
 
   final NovaAppearance appearance;
   final int generation, concepts, experiences, connections, synapses;
-  final int neuralTrainingPairs;
+  final int neuralTrainingPairs, neuralParameters;
+  final String neuralModel;
   final double neuralEntropy;
   final Duration age;
   final String status;
@@ -232,7 +233,7 @@ class _NovaDashboardState extends State<NovaDashboard>
               children: [
                 Text('NOVA', style: TextStyle(fontSize: 19,
                   fontWeight: FontWeight.w900, letterSpacing: 2.6)),
-                Text('LOCAL • NEURAL LAB', style: TextStyle(
+                Text('NÚCLEO NEURAL LOCAL', style: TextStyle(
                   color: dim, fontSize: 9, letterSpacing: 1.5)),
               ]),
           ]),
@@ -346,9 +347,13 @@ class _NovaDashboardState extends State<NovaDashboard>
         ]),
         const SizedBox(height: 9),
         Row(children: [
+          Expanded(child: _stat('Parâmetros neurais',
+            _compact(widget.neuralParameters), Icons.auto_graph_rounded,
+            const Color(0xFF59E391))),
+          const SizedBox(width: 9),
           Expanded(child: _stat('Treino neural',
-            _compact(widget.neuralTrainingPairs),
-            Icons.auto_graph_rounded, const Color(0xFF59E391))),
+            _compact(widget.neuralTrainingPairs), Icons.school_outlined,
+            const Color(0xFF59E391))),
           const SizedBox(width: 9),
           Expanded(child: _stat('Resposta', widget.responseMs.toString() + ' ms',
             Icons.speed_rounded, const Color(0xFFFFC857))),
@@ -389,9 +394,9 @@ class _NovaDashboardState extends State<NovaDashboard>
           )),
           const SizedBox(height: 7),
           Row(children: [
+            _mini('Parâmetros', _compact(widget.neuralParameters)),
             _mini('Entropia', widget.neuralEntropy.toStringAsFixed(2)),
             _mini('Latência', widget.responseMs.toString() + ' ms'),
-            _mini('Experiências', widget.experiences.toString()),
           ]),
         ])),
         const SizedBox(height: 14),
@@ -573,6 +578,16 @@ class _NovaDashboardState extends State<NovaDashboard>
           Icons.route_outlined, const Color(0xFF4CC9F0))),
       ]),
       const SizedBox(height: 9),
+      card(Row(children: [
+        Icon(Icons.layers_outlined, color: accent), const SizedBox(width: 10),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(widget.neuralModel, style: const TextStyle(fontWeight: FontWeight.w900)),
+          const SizedBox(height: 3),
+          Text('Próxima expansão: ${widget.neuralParameters < 197376 ? '197 mil' : 'etapa seguinte'} parâmetros',
+            style: const TextStyle(color: dim, fontSize: 10.5)),
+        ])),
+      ]), padding: const EdgeInsets.all(14)),
+      const SizedBox(height: 12),
       Row(children: [
         Expanded(child: _big('Sinapses', widget.synapses.toString(),
           Icons.bolt_rounded, const Color(0xFFFFC857))),
