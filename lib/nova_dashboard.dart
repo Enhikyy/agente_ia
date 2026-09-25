@@ -49,7 +49,7 @@ class NovaAppearance {
   IconData get avatarIcon => [
     Icons.hub_rounded, Icons.auto_awesome_rounded,
     Icons.psychology_rounded, Icons.blur_on_rounded,
-  ][avatar.clamp(0, 3)];
+  ][avatar.clamp(0, 3).toInt()];
   Map<String, dynamic> toJson() => {
     'palette': palette.index, 'density': density.index, 'avatar': avatar,
   };
@@ -446,7 +446,7 @@ class _NovaDashboardState extends State<NovaDashboard>
         const SizedBox(height: 7),
         ClipRRect(borderRadius: BorderRadius.circular(99),
           child: LinearProgressIndicator(
-            minHeight: 8, value: value.clamp(0, 1),
+            minHeight: 8, value: value.clamp(0.0, 1.0).toDouble(),
             backgroundColor: Colors.white.withOpacity(.07),
             valueColor: AlwaysStoppedAnimation(color))),
       ]);
@@ -810,9 +810,9 @@ class _NetworkPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final count = math.max(8, math.min(20, links.length + 8));
+    final count = math.max(8, math.min(20, links.length + 8)).toInt();
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = math.min(size.width, size.height) * .31;
+    final radius = math.min(size.width, size.height).toDouble() * .31;
     final nodes = <Offset>[];
     for (var i = 0; i < count; i++) {
       final a = 2 * math.pi * i / count;
