@@ -1027,8 +1027,27 @@ e controles explícitos do usuário. ''';
     });
   }
 
-  String? _socialResponse(String normalized) {
-    if (RegExp(r'^(oi+|ola+|opa|e ai|eae|salve)( nova)?
+  String? _socialResponse(String q) {
+    if (['oi','olá','ola','opa','e ai','eae','salve','oi nova','olá nova','ola nova'].contains(q)) {
+      return 'Olá! Estou aqui. Como posso ajudar você hoje?';
+    }
+    if (['bom dia','boa tarde','boa noite','bom dia nova','boa tarde nova','boa noite nova'].contains(q)) {
+      return q.startsWith('bom dia') ? 'Bom dia! Como você está?' :
+        q.startsWith('boa tarde') ? 'Boa tarde! Como você está?' : 'Boa noite! Como você está?';
+    }
+    if (['tudo bem','tudo bom','como vai','voce esta bem','tudo bem com voce'].contains(q)) {
+      return 'Tudo funcionando por aqui! E com você? Quer conversar ou realizar alguma tarefa?';
+    }
+    if (['obrigado','obrigada','valeu','muito obrigado','muito obrigada'].contains(q)) {
+      return 'Por nada! Estou à disposição.';
+    }
+    if (['tchau','ate mais','boa noite e tchau'].contains(q)) {
+      return 'Até mais! Seu histórico permanece salvo localmente.';
+    }
+    return null;
+  }
+
+  Future<void> processarEntrada(String textoUsuario) async {
     if (textoUsuario.trim().isEmpty || isLendo || isThinking) return;
     final parsed = commandRouter.parse(textoUsuario);
     // Every message is visible in the central chat, including quick actions.
