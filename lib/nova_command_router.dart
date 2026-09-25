@@ -56,7 +56,10 @@ class NovaCommandRouter {
     }
     final words = q.split(' ');
     final hasAny = (List<String> values) => values.any((value) => q.contains(value));
-    if (hasAny(['teste', 'diagnostico', 'verificar integridade', 'rodar os testes'])) {
+    if (q == 'diagnostico' || q == 'exportar diagnostico') {
+      return const NovaCommand(NovaCommandKind.diagnostics);
+    }
+    if (hasAny(['teste', 'verificar integridade', 'rodar os testes', 'executar os testes'])) {
       return const NovaCommand(NovaCommandKind.tests);
     }
     if (const ['status','status da nova','como voce esta','como esta'].contains(q) ||
@@ -92,9 +95,6 @@ class NovaCommandRouter {
     if (q == 'backup' || q == 'congelar memoria' || q == 'salvar memoria' ||
         q == 'faca um backup' || q == 'faz um backup' || hasAny(['salve meu estado', 'salvar meu estado'])) {
       return const NovaCommand(NovaCommandKind.backup);
-    }
-    if (q == 'exportar diagnostico' || q == 'diagnostico') {
-      return const NovaCommand(NovaCommandKind.diagnostics);
     }
     if (q == 'refinar parametros' || q == 'refinar') {
       return const NovaCommand(NovaCommandKind.refine);
