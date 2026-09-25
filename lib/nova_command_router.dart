@@ -55,7 +55,7 @@ class NovaCommandRouter {
       return const NovaCommand(NovaCommandKind.help);
     }
     final words = q.split(' ');
-    final hasAny = (List<String> values) => values.any((value) => q.contains(value));
+    bool hasAny(List<String> values) => values.any((value) => q.contains(value));
     if (q == 'diagnostico' || q == 'exportar diagnostico') {
       return const NovaCommand(NovaCommandKind.diagnostics);
     }
