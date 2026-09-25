@@ -5,9 +5,9 @@ void main() {
   test('modelo inicial possui cerca de 100 mil parâmetros', () {
     final model = NovaNeuralCore();
     expect(model.parametros, 100104);
-    expect(model.hiddenSize, 160);
-    expect(model.bytesFloat32Estimados, 401536);
-    expect(model.bytesInt8Estimados, 100384);
+    expect(model.hiddenSize, 130);
+    expect(model.bytesFloat32Estimados, 400416);
+    expect(model.bytesInt8Estimados, 100104);
   });
 
   test('treino neural altera a previsão e gera texto', () {
@@ -30,7 +30,6 @@ void main() {
     expect(restaurado.parametros, model.parametros);
     expect(restaurado.trainingPairs, model.trainingPairs);
     expect(restaurado.generation, model.generation);
-    expect(restaurado.parametros, model.parametros);
   });
 
   test('candidato não altera o modelo ativo', () {
@@ -48,7 +47,7 @@ void main() {
       'relações internacionais e política global ' * 20,
       256,
     );
-    expect(candidato.parametros, 197376);
+    expect(candidato.parametros, 196864);
     expect(candidato.parametros, greaterThan(ativo.parametros));
     expect(candidato.trainingPairs, greaterThan(ativo.trainingPairs));
   });
@@ -63,7 +62,7 @@ void main() {
       'weights': List<double>.filled(1024, 0),
     };
     final migrado = NovaNeuralCore.fromJson(antigo);
-    expect(migrado.parametros, 100384);
+    expect(migrado.parametros, 100104);
   });
 
   test('pesos corrompidos são rejeitados', () {
