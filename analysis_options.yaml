@@ -1,5 +1,8 @@
 include: package:flutter_lints/flutter.yaml
 
-analyzer:
-  errors:
-    info: ignore
+linter:
+  rules:
+    curly_braces_in_flow_control_structures: false
+    prefer_const_constructors: false
+    prefer_interpolation_to_compose_strings: false
+    prefer_is_empty: false
