@@ -1179,6 +1179,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       isReading: isLendo,
       isThinking: isThinking,
       milestones: milestones,
+      generationReports: generationReports,
+      resourceSamples: resourceSamples,
       plugins: pluginsAdquiridos,
       onPlugin: _pluginAction,
       onInstallLocal: _installLocalPack,
