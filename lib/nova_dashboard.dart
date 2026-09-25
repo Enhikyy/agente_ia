@@ -792,7 +792,7 @@ class _NovaDashboardState extends State<NovaDashboard> with TickerProviderStateM
     const SizedBox(height: 3),
     const Text('Instale e conecte ferramentas ao agente sem sair do aplicativo.', style: TextStyle(color: muted, fontSize: 10)),
     const SizedBox(height: 10),
-    SizedBox(height: 134, child: ListView.separated(
+    SizedBox(height: 156, child: ListView.separated(
       scrollDirection: Axis.horizontal, itemCount: _plugins.length,
       separatorBuilder: (_, __) => const SizedBox(width: 8),
       itemBuilder: (_, i) => pluginCard(_plugins[i]),
