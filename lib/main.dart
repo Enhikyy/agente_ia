@@ -1,3 +1,4 @@
+import 'nova_module_benchmark.dart';
 import 'nova_module_runtime.dart';
 import 'nova_neural_core.dart';
 import 'nova_diagnostics.dart';
@@ -1129,29 +1130,63 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     }
   }
 
-  /// Produces an installable data-only module; no Android APK replacement.
-  /// A staged module is deliberately NOT activated before real benchmarks.
+  /// Stage, benchmark and autonomously promote only with verified process PSS.
   Future<void> _stageAutonomousModule() async {
     if (!resourceDecision.mayRunIntensive) return;
     final directory = await getApplicationDocumentsDirectory();
-    final store = NovaModuleStore(
-        Directory('${directory.path}/nova_modules'));
+    final store = NovaModuleStore(Directory('${directory.path}/nova_modules'));
     final active = await store.activeHash();
-    final activeGeneration = active == null
-        ? 0 : (await store.load(active)).generation;
-    final module = NovaModule(
-      generation: activeGeneration + 1,
-      instructions: [
-        {'op': 'normalize'},
-        {'op': 'truncate', 'length': 4096},
-      ],
+    final baseline = active == null
+        ? NovaModule(generation: 0, instructions: [
+            {'op': 'normalize'}, {'op': 'truncate', 'length': 4096},
+          ])
+        : await store.load(active);
+    // Preserve the initial implementation as an explicit rollback target.
+    if (active == null) await store.activate(await store.stage(baseline));
+    final candidate = NovaModule(
+      generation: baseline.generation + 1,
+      instructions: [{'op': 'normalize'}],
     );
-    latestStagedModule = await store.stage(module);
+    latestStagedModule = await store.stage(candidate);
+    final inputs = List<String>.generate(40, (i) =>
+        '  ESTUDO  AUTONOMO   NOVA   ${i % 10}  ');
+    final benchmarker = const NovaModuleBenchmarker();
+    final expected = (String text) =>
+        text.toLowerCase().trim().replaceAll(RegExp(r'\\s+'), ' ');
+    final before = await benchmarker.measure(baseline, inputs, expected);
+    final after = await benchmarker.measure(candidate, inputs, expected);
+    final accepted = before != null && after != null &&
+        const NovaModuleGate().eligible(before, after);
+    generationReports.add({
+      'at': DateTime.now().toUtc().toIso8601String(),
+      'kind': 'portableModule',
+      'generation': candidate.generation,
+      'generationPromoted': accepted,
+      'moduleHash': latestStagedModule,
+      'baseline': before?.toJson(),
+      'candidate': after?.toJson(),
+      'accuracy': after?.accuracy,
+      'latencyUs': after?.latencyUs,
+      'memoryKb': after?.processPssKb,
+      'memoryMetric': 'Android process PSS',
+      'energy': null,
+    });
+    if (generationReports.length > 100) generationReports.removeAt(0);
+    if (accepted) {
+      await store.activate(latestStagedModule!);
+      try {
+        final smoke = await store.runActive('  TESTE   NOVA  ');
+        if (smoke != 'teste nova') throw StateError('Smoke test failed');
+      } catch (_) {
+        await store.rollback();
+        rethrow;
+      }
+    }
     if (mounted) setState(() => mensagens.add({
-      'texto': 'Módulo NOVA-MODULE/1 criado e verificado: '
-          '${latestStagedModule!.substring(0, 12)}. '
-          'Aguardando benchmarks de precisão, latência e RAM real '
-          'antes da ativação. Nenhum APK foi substituído.',
+      'texto': 'Módulo ${candidate.generation} '
+          '${accepted ? "promovido" : "arquivado sem ativação"}. '
+          '${before == null || after == null ? "PSS indisponível: promoção bloqueada." : "Precisão ${(after.accuracy * 100).toStringAsFixed(1)}%; latência ${before.latencyUs} → ${after.latencyUs} µs; PSS ${before.processPssKb} → ${after.processPssKb} KB."} '
+          'Critérios: precisão ≥95%, latência e RAM ≥20% melhores.',
       'isSystem': true,
     }));
   }
