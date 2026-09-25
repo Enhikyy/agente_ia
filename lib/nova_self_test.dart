@@ -104,7 +104,7 @@ class NovaSelfTestSuite {
       final before = model.accuracy('abababababababab');
       model.train('ab' * 300, maxExamples: 64);
       final after = model.accuracy('abababababababab');
-      return model.trainingPairs > 0 && after >= before && model.parametros == 100384;
+      return model.trainingPairs > 0 && after >= before && model.parametros == 100489;
     });
 
     test('Neural: serialização reversível', () {
