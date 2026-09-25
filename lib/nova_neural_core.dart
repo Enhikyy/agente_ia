@@ -87,6 +87,7 @@ class NovaNeuralCore {
     return etapas[i + 1];
   }
   double get sparsidade => 1 - activeNeuronBudget / hiddenSize;
+  int get neuronsActive => activeNeuronBudget;
   int get parametrosAtivosEstimados {
     const context = 16;
     return context * dimensaoEntrada +
