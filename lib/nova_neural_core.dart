@@ -112,7 +112,7 @@ class NovaNeuralCore {
     }
   }
 
-  String get modelo => 'NOVA Neural ${parametros} parâmetros';
+  String get modelo => 'NOVA Neural $parametros parâmetros';
 
   String get estagio => hiddenSize == dimensaoInicial
       ? 'Fundação • ~100 mil'
