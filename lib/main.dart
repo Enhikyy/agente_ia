@@ -274,6 +274,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   const NovaNeuralLab neuralLab = NovaNeuralLab();
   late NovaNeuralCheckpointStore checkpointStore;
   final List<NovaNeuralCheckpoint> checkpoints = [];
+  Map<String, dynamic> dictionaryStats = <String, dynamic>{};
 
   late File arquivoMemoria;
   late NovaPackInstaller packInstaller;
@@ -428,6 +429,52 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       }
       await temporario.rename(arquivoMemoria.path);
     } catch (_) {}
+  }
+
+  Future<void> _restoreCheckpoint(String id) async {
+    if (!memoryReady) return;
+    try {
+      final checkpoint = checkpoints.firstWhere((item) => item.id == id);
+      if (!mounted) return;
+      setState(() => statusPensamento = 'Restaurando checkpoint…');
+      neuralCore = await checkpointStore.restore(checkpoint);
+      _recordMilestone(
+        'restore-' + checkpoint.id,
+        'Checkpoint restaurado',
+        'Geração ' + neuralCore.generation.toString() + ' • ' +
+            neuralCore.parametros.toString() + ' parâmetros',
+      );
+      await salvarMemoriaInstantanea();
+      if (mounted) {
+        setState(() {
+          statusPensamento = 'Checkpoint restaurado';
+          mensagens.add({
+            'texto': 'Checkpoint restaurado com sucesso. Modelo ativo: ' +
+                neuralCore.parametros.toString() + ' parâmetros.',
+            'isSystem': true,
+          });
+        });
+      }
+    } catch (error) {
+      if (mounted) setState(() => mensagens.add({
+        'texto': 'Não foi possível restaurar o checkpoint: ' + error.toString(),
+        'isSystem': true,
+      }));
+    }
+  }
+
+  Future<void> _setActiveNeuronBudget(int value) async {
+    final safe = value.clamp(4, min(64, neuralCore.hiddenSize)).toInt();
+    neuralCore.activeNeuronBudget = safe;
+    await salvarMemoriaInstantanea();
+    if (mounted) setState(() => statusPensamento = 'Orçamento neural: ' + safe.toString());
+  }
+
+  void _cycleAppearance() {
+    final next = (appearance.palette.index + 1) % NovaPalette.values.length;
+    appearance.palette = NovaPalette.values[next];
+    salvarMemoriaInstantanea();
+    if (mounted) setState(() {});
   }
 
   Future<void> _evolveNeuralNow() async {
@@ -590,6 +637,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         final learned = p.title + '. ' + p.extract;
         linguagem.learnDocument(learned, source: p.url);
         codeDictionary.learn(learned);
+        dictionaryStats = codeDictionary.stats(learned);
         evolucao.observe(learned);
         neuralCore.train(learned, learningRate: .04);
         cerebroMatriz.aprenderComOtimizacao(learned);
@@ -786,6 +834,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     arquivoMemoria = File('${dir.path}/matriz_neural_quantica_v6.json');
     packInstaller = NovaPackInstaller(Directory('${dir.path}/nova_packs'));
     checkpointStore = NovaNeuralCheckpointStore(Directory('${dir.path}/nova_checkpoints'));
+    checkpoints
+      ..clear()
+      ..addAll(await checkpointStore.list());
     pluginsAdquiridos = (await packInstaller.installed())
         .map((pack) => pack.name).toList();
     memoryReady = true;
@@ -813,6 +864,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             if (pacote['generationReports'] is List) {
               generationReports.addAll((pacote['generationReports'] as List)
                 .whereType<Map>().map((r) => Map<String, dynamic>.from(r)).take(100));
+            }
+            if (pacote['neuralLabStats'] is Map) {
+              dictionaryStats = Map<String, dynamic>.from(pacote['neuralLabStats']);
             }
             if (pacote['codeDictionary'] is Map) {
               codeDictionary.fromJson(pacote['codeDictionary']);
@@ -1152,6 +1206,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     if (responseSamplesMs.length > 100) responseSamplesMs.removeAt(0);
     linguagem.learnConversation(textoUsuario);
     codeDictionary.learn(textoUsuario);
+    dictionaryStats = codeDictionary.stats(textoUsuario);
     evolucao.observe(textoUsuario);
     cerebroMatriz.aprenderComOtimizacao(textoUsuario);
     neuralCore.train(textoUsuario, learningRate: .025);
@@ -1621,6 +1676,16 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       neuralEntropy: cerebroMatriz.entropiaNeural,
       evaluationCount: evaluationCases.length,
       evaluationAccuracy: evaluationAccuracy,
+      activeNeuronBudget: neuralCore.neuronsActive,
+      dictionaryEntries: codeDictionary.entries,
+      dictionaryStats: dictionaryStats,
+      checkpoints: checkpoints,
+      schoolTopics: NovaEducationProgress.schoolTopics,
+      universityTopics: NovaResearchCurriculum.university,
+      postgraduateTopics: NovaResearchCurriculum.postgraduate,
+      passedEducationTopics: educationAssessments.where((a) => a.passed).map((a) => a.topic).toSet().toList(),
+      onRestoreCheckpoint: _restoreCheckpoint,
+      onSetNeuronBudget: _setActiveNeuronBudget,
       testPassed: latestSelfTest?.passedCount ?? 0,
       testTotal: latestSelfTest?.tests.length ?? 0,
       testFailed: latestSelfTest?.failedCount ?? 0,
@@ -1647,10 +1712,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       supervisedAutonomyConfigured: autonomyPolicy.mode == NovaAutonomyMode.supervised &&
         autonomyPolicy.deletion == NovaDeletionMode.disposableAutomatic,
       onEvolve: () => processarEntrada('evoluir'),
-      onAppearance: () {
-        setState(() {});
-        salvarMemoriaInstantanea();
-      },
+      onAppearance: _cycleAppearance,
       onResearch: _researchStatus,
       researchProgress: researchProgress,
       researchStage: researchStage,
