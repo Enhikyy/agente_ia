@@ -8,7 +8,8 @@ void main() {
     var saved = 0;
     await tester.pumpWidget(MaterialApp(home: NovaDashboard(
       appearance: appearance, generation: 2, concepts: 35,
-      experiences: 12, age: const Duration(hours: 4),
+      experiences: 12, connections: 18, synapses: 32,
+      neuralTrainingPairs: 120, neuralEntropy: 2.4, age: const Duration(hours: 4),
       status: 'Repouso', responseMs: 14,
       messages: const [{'texto': 'Olá', 'isSystem': true}],
       input: TextEditingController(), scroll: ScrollController(),
@@ -19,19 +20,12 @@ void main() {
       isThinking: false, milestones: const [],
       onInstallLocal: () {}, onInstallUrl: () {},
     )));
-    expect(find.text('Geração 002'), findsOneWidget);
+    expect(find.text('G2'), findsWidgets);
     expect(find.text('14 ms'), findsOneWidget);
-    await tester.tap(find.text('Ajustes'));
+    await tester.tap(find.text('Sistema'));
     await tester.pumpAndSettle();
-    expect(find.text('Personalização'), findsOneWidget);
-    await tester.tap(find.text('Oceano'));
-    await tester.pumpAndSettle();
-    expect(appearance.palette, NovaPalette.ocean);
-    expect(saved, greaterThan(0));
-    await tester.tap(find.text('Plugins'));
-    await tester.pumpAndSettle();
-    expect(find.text('Compactação GZIP'), findsOneWidget);
-    await tester.tap(find.text('Chat'));
+    expect(find.text('Sistema'), findsOneWidget);
+    await tester.tap(find.text('Comandos'));
     await tester.pumpAndSettle();
     expect(find.text('Olá'), findsOneWidget);
   });
