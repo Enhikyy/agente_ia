@@ -130,18 +130,25 @@ class NovaNeuralLab {
     for (final model in models) {
       final kind = model.parametros < baseline.parametros
           ? 'Compactação '
-          : 'Expansão ';
-      final score = benchmark(kind + model.parametros.toString() + 'p',
-        model, holdout);
+          : model.neuronsActive < baseline.neuronsActive
+              ? 'Ativação esparsa '
+              : 'Expansão ';
+      final label = kind + model.neuronsActive.toString() + 'n / ' +
+          model.parametros.toString() + 'p';
+      final score = benchmark(label, model, holdout);
       scores.add(score);
       byLabel[score.label] = model;
     }
     String? promoted;
     NovaNeuralCore? promotedModel;
     for (final score in scores) {
+      final enoughData = score.sampleCount >= 20 && base.sampleCount >= 20;
+      final valid = score.accuracy.isFinite && base.accuracy.isFinite &&
+          score.latencyUs > 0 && base.latencyUs > 0;
       final faster = score.latencyUs <= base.latencyUs * 0.8;
       final smaller = score.parameters <= base.parameters;
       final precise = score.accuracy >= base.accuracy;
+      if (!enoughData || !valid) continue;
       if (faster && smaller && precise) {
         if (promoted == null) {
           promoted = score.label;
