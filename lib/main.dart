@@ -1113,6 +1113,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     linguagem.learnConversation(textoUsuario);
     evolucao.observe(textoUsuario);
     cerebroMatriz.aprenderComOtimizacao(textoUsuario);
+    neuralCore.train(textoUsuario, learningRate: .025);
     final resultado = {'resposta': resposta};
 
     setState(() {
@@ -1177,6 +1178,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       List<String> frases = texto.split('.');
       for (var frase in frases) {
         cerebroMatriz.aprenderComOtimizacao(frase);
+        neuralCore.train(frase, learningRate: .04);
       }
       
       await salvarMemoriaInstantanea();
