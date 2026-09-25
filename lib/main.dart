@@ -1,5 +1,7 @@
 import 'nova_module_benchmark.dart';
 import 'nova_module_runtime.dart';
+import 'nova_command_router.dart';
+import 'nova_self_test.dart';
 import 'nova_neural_core.dart';
 import 'nova_diagnostics.dart';
 import 'nova_autonomy_policy.dart';
@@ -263,6 +265,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   final HemisferioDireitoQuantico cerebroMatriz = HemisferioDireitoQuantico();
   final NovaDevelopmentalLanguage linguagem = NovaDevelopmentalLanguage();
   final NovaEvolutionEngine evolucao = NovaEvolutionEngine();
+  final NovaCommandRouter commandRouter = NovaCommandRouter();
+  NovaSelfTestReport? latestSelfTest;
   
   late File arquivoMemoria;
   late NovaPackInstaller packInstaller;
@@ -287,6 +291,31 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   final List<Map<String, String>> evaluationCases = [];
   double get averageResponseMs => responseSamplesMs.isEmpty ? 0 :
     responseSamplesMs.reduce((a, b) => a + b) / responseSamplesMs.length;
+  double? get evaluationAccuracy {
+    if (evaluationCases.isEmpty) return null;
+    var correct = 0;
+    for (final item in evaluationCases) {
+      final expected = item['expected']?.trim().toLowerCase() ?? '';
+      if (expected.isEmpty) continue;
+      final answer = linguagem.answer(item['question'] ?? '', minScore: retrievalThreshold).toLowerCase();
+      if (answer.contains(expected)) correct++;
+    }
+    return correct / evaluationCases.length;
+  }
+  int get synapseCount => cerebroMatriz.sinapses.values.fold<int>(
+    0, (sum, links) => sum + links.length);
+  List<String> get neuralLinks {
+    final links = <MapEntry<String, double>>[];
+    for (final entry in cerebroMatriz.sinapses.entries) {
+      for (final target in entry.value.entries) {
+        final from = cerebroMatriz.dicionarioInverso[entry.key] ?? entry.key;
+        final to = cerebroMatriz.dicionarioInverso[target.key] ?? target.key;
+        links.add(MapEntry(from + ' → ' + to, target.value));
+      }
+    }
+    links.sort((a, b) => b.value.compareTo(a.value));
+    return links.take(18).map((e) => e.key + '  •  ' + e.value.toStringAsFixed(1)).toList();
+  }
   bool researching = false;
   double retrievalThreshold = 0;
   final NovaResourceGuard resourceGuard = const NovaResourceGuard();
@@ -392,6 +421,176 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       }
       await temporario.rename(arquivoMemoria.path);
     } catch (_) {}
+  }
+
+  Future<void> _runFunctionalTests() async {
+    if (mounted) {
+      setState(() => statusPensamento = 'Executando diagnóstico…');
+    }
+    final report = await const NovaSelfTestSuite().run();
+    latestSelfTest = report;
+    generationReports.add({
+      'at': DateTime.now().toUtc().toIso8601String(),
+      'kind': 'selfTest',
+      'generation': evolucao.generation,
+      'generationPromoted': report.allPassed,
+      'evaluationCount': report.tests.length,
+      'passed': report.passedCount,
+      'failed': report.failedCount,
+      'accuracy': report.coverage,
+      'durationMs': report.durationMs,
+    });
+    if (generationReports.length > 100) generationReports.removeAt(0);
+    await salvarMemoriaInstantanea();
+    if (mounted) {
+      setState(() {
+        statusPensamento = report.allPassed ? 'Diagnóstico íntegro' : 'Diagnóstico com falhas';
+        mensagens.add({
+          'texto': 'Diagnóstico NOVA: ' + report.passedCount.toString() +
+            '/' + report.tests.length.toString() + ' testes passaram em ' +
+            report.durationMs.toString() + ' ms.' +
+            (report.allPassed ? ' Todos os testes funcionais passaram.'
+              : ' Existem ' + report.failedCount.toString() + ' falhas; veja a aba Evolução.'),
+          'isSystem': true,
+        });
+      });
+    }
+  }
+
+  Future<void> _addEvaluationCase() async {
+    final question = TextEditingController();
+    final expected = TextEditingController();
+    try {
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Novo caso independente'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(controller: question, autofocus: true,
+              decoration: const InputDecoration(labelText: 'Pergunta')),
+            const SizedBox(height: 10),
+            TextField(controller: expected,
+              decoration: const InputDecoration(
+                labelText: 'Resposta / trecho esperado')),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancelar')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Adicionar')),
+          ],
+        ),
+      );
+      if (result != true) return;
+      final q = question.text.trim(), e = expected.text.trim();
+      if (q.length < 2 || e.length < 1) return;
+      evaluationCases.add({'question': q, 'expected': e});
+      if (evaluationCases.length > 100) evaluationCases.removeAt(0);
+      await salvarMemoriaInstantanea();
+      if (mounted) {
+        setState(() => mensagens.add({
+          'texto': 'Caso de avaliação registrado. Total: ' +
+            evaluationCases.length.toString() + '.',
+          'isSystem': true,
+        }));
+      }
+    } finally {
+      question.dispose();
+      expected.dispose();
+    }
+  }
+
+  void _showCommands() {
+    final commands = [
+      'status',
+      'testes',
+      'rede neural',
+      'evoluir',
+      'pesquise <tema>',
+      'estude <tema>',
+      'estudar agora',
+      'avaliar: pergunta | resposta esperada',
+      'backup',
+      'exportar diagnostico',
+      'recursos',
+      'autonomia iniciar / autonomia parar',
+    ];
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Comandos que a NOVA entende'),
+        content: SingleChildScrollView(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+            children: commands.map((c) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text('• ' + c),
+            )).toList()),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(context),
+          child: const Text('Fechar'))],
+      ),
+    );
+  }
+
+  Future<void> _researchTerm(String term) async {
+    final clean = term.trim();
+    if (clean.length < 2 || researching) return;
+    if (!await _authorizeIntensiveTask()) return;
+    setState(() {
+      researching = true;
+      researchProgress = 0;
+      researchStage = 'Iniciando pesquisa';
+      statusPensamento = researchStage;
+    });
+    final timer = Stopwatch()..start();
+    try {
+      final result = await NovaWebResearch().search(clean, onProgress: (value, stage) {
+        if (mounted) {
+          setState(() {
+            researchProgress = value;
+            researchStage = stage;
+            statusPensamento = stage;
+          });
+        }
+      });
+      if (!mounted) return;
+      final text = result.pages.isEmpty
+        ? 'Nenhum artigo com resumo encontrado para: ' + clean + '.'
+        : result.pages.map((p) => p.title + '\n' + p.extract + '\nFonte: ' + p.url).join('\n\n');
+      for (final p in result.pages) {
+        final learned = p.title + '. ' + p.extract;
+        linguagem.learnDocument(learned, source: p.url);
+        evolucao.observe(learned);
+        neuralCore.train(learned, learningRate: .04);
+        cerebroMatriz.aprenderComOtimizacao(learned);
+      }
+      timer.stop();
+      setState(() {
+        lastResearchMs = timer.elapsedMilliseconds;
+        lastResponseMs = lastResearchMs;
+        mensagens.add({'texto': 'Pesquisa: ' + clean, 'isUser': true});
+        mensagens.add({'texto': text + '\n\nPesquisa: ' +
+          lastResearchMs.toString() + ' ms; ' +
+          result.pages.length.toString() + ' fontes.', 'isUser': false});
+        researchProgress = 1;
+        researchStage = 'Concluído';
+        statusPensamento = 'Pesquisa concluída';
+      });
+      await salvarMemoriaInstantanea();
+    } catch (error) {
+      timer.stop();
+      if (mounted) {
+        setState(() {
+          lastResearchMs = timer.elapsedMilliseconds;
+          researchStage = 'Falha na pesquisa';
+          statusPensamento = researchStage;
+          mensagens.add({'texto': 'Não foi possível pesquisar: ' + error.toString(),
+            'isSystem': true});
+        });
+      }
+    } finally {
+      if (mounted) setState(() => researching = false);
+    }
   }
 
   Future<void> verificarAtualizacoes({bool silent = false}) async {
@@ -650,6 +849,91 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
 
   Future<void> processarEntrada(String textoUsuario) async {
     if (textoUsuario.trim().isEmpty || isLendo) return;
+    final parsed = commandRouter.parse(textoUsuario);
+    switch (parsed.kind) {
+      case NovaCommandKind.help:
+        _showCommands();
+        return;
+      case NovaCommandKind.status:
+        if (mounted) setState(() => mensagens.add({
+          'texto': 'Status: G' + evolucao.generation.toString() +
+            ' • ' + evolucao.concepts.toString() + ' conceitos • ' +
+            synapseCount.toString() + ' sinapses • ' +
+            neuralCore.trainingPairs.toString() + ' pares de treino neural • ' +
+            (evaluationCases.isEmpty ? '0 testes de resposta.' :
+              evaluationCases.length.toString() + ' casos; acurácia ' +
+              ((evaluationAccuracy ?? 0) * 100).toStringAsFixed(1) + '%.'),
+          'isSystem': true,
+        }));
+        return;
+      case NovaCommandKind.tests:
+        await _runFunctionalTests();
+        return;
+      case NovaCommandKind.network:
+        if (mounted) setState(() => mensagens.add({
+          'texto': 'Rede associativa: ' + evolucao.concepts.toString() +
+            ' conceitos, ' + evolucao.connections.toString() + ' conexões e ' +
+            synapseCount.toString() + ' sinapses. Ligações fortes: ' +
+            (neuralLinks.isEmpty ? 'nenhuma ainda.' : neuralLinks.take(5).join('; ')),
+          'isSystem': true,
+        }));
+        return;
+      case NovaCommandKind.research:
+        await _researchTerm(parsed.argument);
+        return;
+      case NovaCommandKind.addEvaluation:
+        final parts = parsed.argument.split('|');
+        if (parts.length == 2 && parts.every((p) => p.trim().length >= 1)) {
+          evaluationCases.add({
+            'question': parts[0].trim(), 'expected': parts[1].trim(),
+          });
+          if (evaluationCases.length > 100) evaluationCases.removeAt(0);
+          await salvarMemoriaInstantanea();
+          if (mounted) setState(() => mensagens.add({
+            'texto': 'Caso registrado. Total: ' + evaluationCases.length.toString() + '.',
+            'isSystem': true,
+          }));
+        } else {
+          if (mounted) setState(() => mensagens.add({
+            'texto': 'Use: avaliar: pergunta | resposta esperada',
+            'isSystem': true,
+          }));
+        }
+        return;
+      case NovaCommandKind.plugins:
+        if (mounted) setState(() => mensagens.add({
+          'texto': 'Plugins: ' + (pluginsAdquiridos.isEmpty
+            ? 'nenhum pacote instalado.' : pluginsAdquiridos.join(', ')),
+          'isSystem': true,
+        }));
+        return;
+      case NovaCommandKind.studyNow:
+        await _autonomousStudy();
+        return;
+      case NovaCommandKind.studyStart:
+        autonomousStudyEnabled = true;
+        await salvarMemoriaInstantanea();
+        if (mounted) setState(() => mensagens.add({
+          'texto': 'Estudo autônomo ativado.', 'isSystem': true}));
+        return;
+      case NovaCommandKind.studyStop:
+        autonomousStudyEnabled = false;
+        await salvarMemoriaInstantanea();
+        if (mounted) setState(() => mensagens.add({
+          'texto': 'Estudo autônomo desativado.', 'isSystem': true}));
+        return;
+      case NovaCommandKind.evolve:
+      case NovaCommandKind.backup:
+      case NovaCommandKind.diagnostics:
+      case NovaCommandKind.refine:
+      case NovaCommandKind.resources:
+      case NovaCommandKind.autonomyStart:
+      case NovaCommandKind.autonomyStop:
+        break;
+      case NovaCommandKind.unknown:
+        break;
+    }
+
 
     String comando = textoUsuario.toLowerCase().trim();
     if (comando == 'autonomia iniciar' || comando == 'autonomia parar') {
@@ -1240,48 +1524,24 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
 
   Future<void> _researchStatus() async {
     final input = TextEditingController();
-    final term = await showDialog<String>(context: context, builder: (context) =>
-      AlertDialog(title: const Text('Pesquisar na Wikipédia'),
-        content: TextField(controller: input, autofocus: true,
-          decoration: const InputDecoration(hintText: 'O que deseja pesquisar?')),
-        actions: [TextButton(onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(context, input.text),
-            child: const Text('Pesquisar'))]));
-    input.dispose();
-    if (term == null || term.trim().length < 2 || researching) return;
-    if (!await _authorizeIntensiveTask()) return;
-    setState(() { researching = true; researchProgress = 0;
-      researchStage = 'Iniciando pesquisa'; statusPensamento = researchStage; });
-    final timer = Stopwatch()..start();
     try {
-      final result = await NovaWebResearch().search(term, onProgress: (value, stage) {
-        if (mounted) { setState(() { researchProgress = value;
-          researchStage = stage; statusPensamento = stage; }); }
-      });
-      if (!mounted) return;
-      final text = result.pages.isEmpty
-        ? 'Nenhum artigo com resumo encontrado para: $term.'
-        : result.pages.map((p) => '${p.title}\n${p.extract}\nFonte: ${p.url}').join('\n\n');
-      for (final p in result.pages) {
-        linguagem.learnDocument('${p.title}. ${p.extract}', source: p.url);
-        evolucao.observe('${p.title}. ${p.extract}');
-      }
-      timer.stop();
-      setState(() { lastResearchMs = timer.elapsedMilliseconds;
-        lastResponseMs = lastResearchMs;
-        mensagens.add({'texto': 'Pesquisa: $term', 'isUser': true});
-        mensagens.add({'texto': '$text\n\nPesquisa: $lastResearchMs ms; ${result.pages.length} fontes.', 'isUser': false});
-        researchProgress = 1; researchStage = 'Concluído';
-        statusPensamento = 'Pesquisa concluída'; });
-      await salvarMemoriaInstantanea();
-    } catch (error) {
-      timer.stop();
-      if (mounted) { setState(() { lastResearchMs = timer.elapsedMilliseconds;
-        researchStage = 'Falha na pesquisa'; statusPensamento = researchStage;
-        mensagens.add({'texto': 'Não foi possível pesquisar: $error', 'isSystem': true}); }); }
+      final term = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Pesquisar na Wikipédia'),
+          content: TextField(controller: input, autofocus: true,
+            decoration: const InputDecoration(hintText: 'O que deseja pesquisar?')),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar')),
+            FilledButton(onPressed: () => Navigator.pop(context, input.text),
+              child: const Text('Pesquisar')),
+          ],
+        ),
+      );
+      if (term != null) await _researchTerm(term);
     } finally {
-      if (mounted) setState(() { researching = false; });
+      input.dispose();
     }
   }
 
@@ -1295,6 +1555,19 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       generation: evolucao.generation,
       concepts: evolucao.concepts,
       experiences: evolucao.experiences,
+      connections: evolucao.connections,
+      synapses: synapseCount,
+      neuralTrainingPairs: neuralCore.trainingPairs,
+      neuralEntropy: cerebroMatriz.entropiaNeural,
+      evaluationCount: evaluationCases.length,
+      evaluationAccuracy: evaluationAccuracy,
+      testPassed: latestSelfTest?.passedCount ?? 0,
+      testTotal: latestSelfTest?.tests.length ?? 0,
+      testFailed: latestSelfTest?.failedCount ?? 0,
+      neuralLinks: neuralLinks,
+      onRunTests: _runFunctionalTests,
+      onAddEvaluation: _addEvaluationCase,
+      onShowCommands: _showCommands,
       age: DateTime.now().difference(createdAt),
       status: statusPensamento,
       responseMs: lastResponseMs,
