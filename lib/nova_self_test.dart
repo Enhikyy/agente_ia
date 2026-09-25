@@ -71,7 +71,8 @@ class NovaSelfTestSuite {
       return router.parse('Pesquise relações internacionais').kind ==
           NovaCommandKind.research &&
           router.parse('AVALIAÇÃO: x | y').kind ==
-            NovaCommandKind.addEvaluation;
+            NovaCommandKind.addEvaluation &&
+          router.parse('aumentar os parâmetros').kind == NovaCommandKind.evolve;
     });
 
     test('Comandos: segurança de entrada desconhecida', () {
