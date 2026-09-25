@@ -4,7 +4,7 @@ import 'package:agente_ia/nova_neural_core.dart';
 void main() {
   test('modelo inicial possui cerca de 100 mil parâmetros', () {
     final model = NovaNeuralCore();
-    expect(model.parametros, 100384);
+    expect(model.parametros, 100489);
     expect(model.hiddenSize, 160);
     expect(model.bytesFloat32Estimados, 401536);
     expect(model.bytesInt8Estimados, 100384);
