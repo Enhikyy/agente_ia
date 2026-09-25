@@ -1561,7 +1561,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         }
       } else if (mounted) {
         setState(() => mensagens.add({
-          'texto': 'Laboratório concluído sem promoção. A NOVA preservou o modelo ativo e ' +
+          'texto': 'Laboratório concluído sem promoção. A NOVA preservou o modelo ativo e '
               'registrou ' + result.candidates.length.toString() +
               ' candidatos. Checkpoint-base: ' + before.id + '.',
           'isSystem': true,
