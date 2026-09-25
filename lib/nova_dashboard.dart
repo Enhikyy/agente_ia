@@ -134,9 +134,9 @@ class NovaDashboard extends StatefulWidget {
 
   final NovaAppearance appearance;
   final int generation, concepts, experiences, connections, synapses;
-  final int neuralTrainingPairs, neuralParameters;
+  final int neuralTrainingPairs, neuralParameters, nextNeuralParameters;
   final String neuralModel;
-  final double neuralEntropy;
+  final double neuralEntropy, neuralSparsity;
   final Duration age;
   final String status;
   final int responseMs;
@@ -656,8 +656,8 @@ class _NovaDashboardState extends State<NovaDashboard>
     final labReports = widget.generationReports.where((r) =>
       r['kind'] == 'laboratorioNeural').toList();
     final recent = labReports.reversed.take(6).toList();
-    final nextParams = widget.neuralParameters < 196864
-        ? 196864 : widget.neuralParameters < 262000 ? 262000 : widget.neuralParameters * 2;
+    final nextParams = widget.nextNeuralParameters > 0
+        ? widget.nextNeuralParameters : widget.neuralParameters;
     final paramProgress = (widget.neuralParameters / nextParams).clamp(0.0, 1.0).toDouble();
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
@@ -684,7 +684,7 @@ class _NovaDashboardState extends State<NovaDashboard>
           const SizedBox(height: 9),
           Text(widget.neuralModel, style: const TextStyle(fontWeight: FontWeight.w800)),
           const SizedBox(height: 3),
-          Text('${(100 - (widget.activeNeuronBudget / math.max(1, widget.neuralParameters > 0 ? 131 : 131) * 100)).clamp(0, 99).toStringAsFixed(0)}% de neurônios ocultos sem ativação por passo (estimativa de roteamento).',
+          Text((widget.neuralSparsity * 100).clamp(0, 99.9).toStringAsFixed(1) + '% da camada não é ativada em cada passo (roteamento esparso).',
             style: const TextStyle(color: dim, fontSize: 10)),
           const SizedBox(height: 12),
           Wrap(spacing: 8, runSpacing: 8, children: [
@@ -821,7 +821,7 @@ class _NovaDashboardState extends State<NovaDashboard>
         const SizedBox(height: 9),
         Text('Neurônios ativos por passo: ' + widget.activeNeuronBudget.toString(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
         Slider(
-          value: widget.activeNeuronBudget.toDouble().clamp(4.0, 64.0),
+          value: widget.activeNeuronBudget.toDouble().clamp(4.0, 64.0).toDouble(),
           min: 4, max: 64, divisions: 15,
           label: widget.activeNeuronBudget.toString(),
           onChanged: widget.onSetNeuronBudget == null ? null : (v) => widget.onSetNeuronBudget!(v.round()),
