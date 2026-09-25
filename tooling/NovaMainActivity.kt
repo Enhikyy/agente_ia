@@ -3,6 +3,7 @@ package com.agenteia.app.agente_ia
 import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
+import android.os.Debug
 import android.content.IntentFilter
 import android.net.Uri
 import android.os.BatteryManager
@@ -44,6 +45,24 @@ class MainActivity : FlutterActivity() {
                         result.success(if (file.exists()) file.readLines().take(100) else emptyList<String>())
                     }
                     else -> result.notImplemented()
+                }
+            }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "nova/process_memory")
+            .setMethodCallHandler { call, result ->
+                if (call.method != "read") {
+                    result.notImplemented()
+                    return@setMethodCallHandler
+                }
+                try {
+                    val info = Debug.MemoryInfo()
+                    Debug.getMemoryInfo(info)
+                    result.success(mapOf(
+                        "totalPssKb" to info.totalPss,
+                        "nativePssKb" to info.nativePss,
+                        "dalvikPssKb" to info.dalvikPss
+                    ))
+                } catch (e: Exception) {
+                    result.error("PROCESS_MEMORY_FAILED", e.message, null)
                 }
             }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "nova/device_resources")
