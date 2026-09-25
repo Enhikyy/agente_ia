@@ -54,25 +54,27 @@ class NovaCommandRouter {
     if (const ['ajuda','help','comandos','o que voce consegue fazer'].contains(q)) {
       return const NovaCommand(NovaCommandKind.help);
     }
-    if (q == 'rode os testes' || q == 'executa os testes' || q == 'execute os testes' ||
-        q == 'rodar o diagnostico' || q == 'diagnostico completo') {
+    final words = q.split(' ');
+    final hasAny = (List<String> values) => values.any((value) => q.contains(value));
+    if (hasAny(['teste', 'diagnostico', 'verificar integridade', 'rodar os testes'])) {
       return const NovaCommand(NovaCommandKind.tests);
     }
-    if (const ['status','status da nova','como voce esta','como esta'].contains(q)) {
+    if (const ['status','status da nova','como voce esta','como esta'].contains(q) ||
+        hasAny(['qual o status', 'como anda a nova'])) {
       return const NovaCommand(NovaCommandKind.status);
     }
-    if (const ['testar','testes','teste','diagnostico completo','rodar testes'].contains(q)) {
-      return const NovaCommand(NovaCommandKind.tests);
-    }
-    if (q == 'recursos' || q == 'hardware' || q == 'mostre os recursos') {
+    if (q == 'recursos' || q == 'hardware' || q == 'mostre os recursos' ||
+        hasAny(['recursos do celular', 'uso de memoria', 'uso de ram', 'bateria'])) {
       return const NovaCommand(NovaCommandKind.resources);
     }
     if (q == 'evoluir' || q == 'nova geracao' || q == 'evolucao' ||
         q == 'expandir modelo' || q == 'aumentar parametros' ||
-        q == 'aumentar os parametros' || q == 'subir parametros') {
+        q == 'aumentar os parametros' || q == 'subir parametros' ||
+        hasAny(['otimize o modelo', 'otimizar o modelo', 'evolua a nova',
+          'deixe mais rapido', 'reduza os parametros', 'melhore o modelo'])) {
       return const NovaCommand(NovaCommandKind.evolve);
     }
-    if (q == 'estudar agora' || q == 'estudar') {
+    if (q == 'estudar agora' || q == 'estudar' || q == 'comece a estudar') {
       return const NovaCommand(NovaCommandKind.studyNow);
     }
     if (q == 'estudo autonomo iniciar') {
@@ -88,7 +90,7 @@ class NovaCommandRouter {
       return const NovaCommand(NovaCommandKind.autonomyStop);
     }
     if (q == 'backup' || q == 'congelar memoria' || q == 'salvar memoria' ||
-        q == 'faca um backup' || q == 'faz um backup') {
+        q == 'faca um backup' || q == 'faz um backup' || hasAny(['salve meu estado', 'salvar meu estado'])) {
       return const NovaCommand(NovaCommandKind.backup);
     }
     if (q == 'exportar diagnostico' || q == 'diagnostico') {
@@ -99,27 +101,19 @@ class NovaCommandRouter {
     }
     if (q == 'rede neural' || q == 'rede' || q == 'sinapses' ||
         q == 'ligacoes' || q == 'conexoes' || q == 'mostre a rede' ||
-        q == 'mostre a rede neural') {
+        q == 'mostre a rede neural' ||
+        (hasAny(['mostre', 'exiba']) && hasAny(['rede', 'sinapses', 'conexoes']))) {
       return const NovaCommand(NovaCommandKind.network);
     }
     if (q == 'plugins' || q == 'pacotes') {
       return const NovaCommand(NovaCommandKind.plugins);
     }
-    if (q.startsWith('pesquisar ')) {
+    if (words.isNotEmpty && (q.startsWith('pesquisar ') || q.startsWith('pesquise ') ||
+        q.startsWith('procure ') || q.startsWith('busque ') || q.startsWith('encontre '))) {
+      final prefixes = <String>['pesquisar ', 'pesquise ', 'procure ', 'busque ', 'encontre '];
+      final prefix = prefixes.firstWhere((value) => q.startsWith(value));
       return NovaCommand(NovaCommandKind.research,
-          argument: input.trim().substring(11).trim());
-    }
-    if (q.startsWith('procure ')) {
-      return NovaCommand(NovaCommandKind.research,
-          argument: input.trim().substring(8).trim());
-    }
-    if (q.startsWith('busque ')) {
-      return NovaCommand(NovaCommandKind.research,
-          argument: input.trim().substring(7).trim());
-    }
-    if (q.startsWith('pesquise ')) {
-      return NovaCommand(NovaCommandKind.research,
-          argument: input.trim().substring(9).trim());
+          argument: input.trim().substring(prefix.length).trim());
     }
     if (q.startsWith('estude ')) {
       return NovaCommand(NovaCommandKind.research,
