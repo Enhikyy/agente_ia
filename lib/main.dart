@@ -1114,7 +1114,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       // accepted, promotion is limited to this data-only neural core.
       // The incumbent continues learning even when evolution is rejected.
       neuralCore = accepted ? candidate : baseline;
-      if (mounted) setState(() => mensagens.add({
+      if (mounted) { setState(() => mensagens.add({
         'texto': 'Experimento neural automático: '
             '${(oldAccuracy * 100).toStringAsFixed(1)}% → '
             '${(newAccuracy * 100).toStringAsFixed(1)}% '
@@ -1124,7 +1124,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             '${accepted ? "Geração neural promovida." : "Candidata rejeitada; geração ativa preservada."} '
             'RAM real e energia: não medidas.',
         'isSystem': true,
-      }));
+      })); }
     } finally {
       neuralExperimentBusy = false;
     }
@@ -1150,8 +1150,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     latestStagedModule = await store.stage(candidate);
     final inputs = List<String>.generate(40, (i) =>
         '  ESTUDO  AUTONOMO   NOVA   ${i % 10}  ');
-    final benchmarker = const NovaModuleBenchmarker();
-    final expected = (String text) =>
+    const benchmarker = NovaModuleBenchmarker();
+    String expected(String text) =>
         text.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
     final before = await benchmarker.measure(baseline, inputs, expected);
     final after = await benchmarker.measure(candidate, inputs, expected);
@@ -1182,13 +1182,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         rethrow;
       }
     }
-    if (mounted) setState(() => mensagens.add({
+    if (mounted) { setState(() => mensagens.add({
       'texto': 'Módulo ${candidate.generation} '
           '${accepted ? "promovido" : "arquivado sem ativação"}. '
           '${before == null || after == null ? "PSS indisponível: promoção bloqueada." : "Precisão ${(after.accuracy * 100).toStringAsFixed(1)}%; latência ${before.latencyUs} → ${after.latencyUs} µs; PSS ${before.processPssKb} → ${after.processPssKb} KB."} '
           'Critérios: precisão ≥95%, latência e RAM ≥20% melhores.',
       'isSystem': true,
-    }));
+    })); }
   }
 
   Future<void> _autonomousStudy() async {
