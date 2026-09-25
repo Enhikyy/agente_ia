@@ -865,6 +865,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
               generationReports.addAll((pacote['generationReports'] as List)
                 .whereType<Map>().map((r) => Map<String, dynamic>.from(r)).take(100));
             }
+            if (pacote['pluginsAdquiridos'] is List) {
+              pluginsAdquiridos = (pacote['pluginsAdquiridos'] as List)
+                  .whereType<String>().take(50).toSet().toList();
+            }
             if (pacote['neuralLabStats'] is Map) {
               dictionaryStats = Map<String, dynamic>.from(pacote['neuralLabStats']);
             }
@@ -1402,16 +1406,29 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _installBuiltInPlugin(String id, String name) async {
+    if (!pluginsAdquiridos.contains(name)) {
+      pluginsAdquiridos.add(name);
+      await salvarMemoriaInstantanea();
+      if (mounted) setState(() {});
+    }
+    if (mounted) setState(() => mensagens.add({
+      'texto': 'Plugin ' + name + ' ativado e salvo neste perfil.',
+      'isSystem': true,
+    }));
+  }
+
   void _pluginAction(String id) {
     switch (id) {
       case 'neural_lab':
-        processarEntrada('evoluir');
+        _installBuiltInPlugin(id, 'Laboratório neural').then((_) => processarEntrada('evoluir'));
         break;
       case 'documents':
-        lerBaseDeDados();
+        _installBuiltInPlugin(id, 'Documentos').then((_) => lerBaseDeDados());
         break;
       case 'statistics':
-        if (mounted) {
+        _installBuiltInPlugin(id, 'Estatística').then((_) {
+          if (!mounted) return;
           setState(() => mensagens.add({
             'texto': 'Estatísticas: ' + evolucao.concepts.toString() +
                 ' conceitos • ' + evolucao.experiences.toString() +
@@ -1421,7 +1438,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                 ' neurônios ativos por passo.',
             'isSystem': true,
           }));
-        }
+        });
         break;
       default:
         if (mounted) setState(() => mensagens.add({
