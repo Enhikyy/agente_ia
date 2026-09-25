@@ -1696,6 +1696,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       neuralTrainingPairs: neuralCore.trainingPairs,
       neuralParameters: neuralCore.parametros,
       neuralModel: neuralCore.modelo,
+      neuralSparsity: neuralCore.sparsidade,
+      nextNeuralParameters: neuralCore.proximaEtapa == null ? neuralCore.parametros : NovaNeuralCore(hiddenSize: neuralCore.proximaEtapa!).parametros,
       neuralEntropy: cerebroMatriz.entropiaNeural,
       evaluationCount: evaluationCases.length,
       evaluationAccuracy: evaluationAccuracy,
