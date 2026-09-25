@@ -126,18 +126,8 @@ class NovaNeuralLab {
     final base = benchmark('ATIVA', baseline, holdout);
     final models = buildCandidates(baseline, training);
     final scores = <NovaNeuralBenchScore>[];
-    for (final model in models) {
-      final kind = model.parametros < baseline.parametros
-          ? 'Compactação '
-          : 'Expansão ';
-      scores.add(benchmark(kind + model.parametros.toString() + 'p',
-        model, holdout));
-    }
-    String? promoted;
-    NovaNeuralCore? promotedModel;
     final byLabel = <String, NovaNeuralCore>{};
-    for (var i = 0; i < models.length; i++) {
-      final model = models[i];
+    for (final model in models) {
       final kind = model.parametros < baseline.parametros
           ? 'Compactação '
           : 'Expansão ';
@@ -146,6 +136,8 @@ class NovaNeuralLab {
       scores.add(score);
       byLabel[score.label] = model;
     }
+    String? promoted;
+    NovaNeuralCore? promotedModel;
     for (final score in scores) {
       final faster = score.latencyUs <= base.latencyUs * 0.8;
       final smaller = score.parameters <= base.parameters;
