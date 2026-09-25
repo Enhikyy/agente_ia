@@ -57,8 +57,9 @@ class NovaCommandRouter {
     if (const ['status','status da nova','como voce esta','como esta'].contains(q)) {
       return const NovaCommand(NovaCommandKind.status);
     }
-    if (const ['testar','testes','teste','diagnostico completo','rodar testes']
-        .any(q ==)) return const NovaCommand(NovaCommandKind.tests);
+    if (const ['testar','testes','teste','diagnostico completo','rodar testes'].contains(q)) {
+      return const NovaCommand(NovaCommandKind.tests);
+    }
     if (q == 'recursos' || q == 'hardware') {
       return const NovaCommand(NovaCommandKind.resources);
     }
