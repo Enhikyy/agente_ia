@@ -1238,20 +1238,31 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   Future<void> gerarBackupCriogenico() async {
     try {
       final dir = await getApplicationDocumentsDirectory();
-      final backupFile = File('${dir.path}/agente_cerebro_${DateTime.now().millisecondsSinceEpoch}.quant');
-      await backupFile.writeAsString(cerebroMatriz.gerarPacoteCriogenico());
-      
+      final stamp = DateTime.now().millisecondsSinceEpoch;
+      final backupFile = File(dir.path + '/agente_cerebro_' + stamp.toString() + '.quant');
+      await backupFile.writeAsString(cerebroMatriz.gerarPacoteCriogenico(), flush: true);
+      final neuralFile = File(dir.path + '/nova_neural_' + stamp.toString() + '.ncd.json');
+      final neuralText = jsonEncode({
+        'format': 'nova-ncd-neural-snapshot',
+        'version': 1,
+        'dictionary': codeDictionary.toJson(),
+        'payload': base64Encode(codeDictionary.encode(jsonEncode(neuralCore.toJson()))),
+      });
+      await neuralFile.writeAsString(neuralText, flush: true);
       setState(() {
-        mensagens.add({"texto": "[CRIOGENIA] Backup gerado em: ${backupFile.path}", "isSystem": true});
+        mensagens.add({
+          'texto': '[BACKUP] Memória: ' + backupFile.path + '\n[NCD] Neural: ' + neuralFile.path,
+          'isSystem': true,
+        });
         rolarParaFinal();
       });
     } catch (e) {
-      setState(() {
-        mensagens.add({"texto": "Erro ao gerar backup: $e", "isSystem": true});
-      });
+      setState(() => mensagens.add({
+        'texto': 'Erro ao gerar backup: ' + e.toString(),
+        'isSystem': true,
+      }));
     }
   }
-
   Future<void> lerBaseDeDados() async {
     try {
     FilePickerResult? resultado = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf', 'txt']);
@@ -1386,21 +1397,33 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   }
 
   void _pluginAction(String id) {
-    if (id == 'compression') {
-      processarEntrada('evoluir');
-    } else if (id == 'documents') {
-      lerBaseDeDados();
-    } else {
-      setState(() => mensagens.add({
-        'texto': 'Estatísticas: ${evolucao.concepts} conceitos, '
-          '${evolucao.experiences} experiências, ${evolucao.connections} conexões.',
-        'isSystem': true,
-      }));
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Estatísticas adicionadas ao chat.')));
+    switch (id) {
+      case 'neural_lab':
+        processarEntrada('evoluir');
+        break;
+      case 'documents':
+        lerBaseDeDados();
+        break;
+      case 'statistics':
+        if (mounted) {
+          setState(() => mensagens.add({
+            'texto': 'Estatísticas: ' + evolucao.concepts.toString() +
+                ' conceitos • ' + evolucao.experiences.toString() +
+                ' experiências • ' + evolucao.connections.toString() +
+                ' conexões • ' + neuralCore.parametros.toString() +
+                ' parâmetros neurais • ' + neuralCore.neuronsActive.toString() +
+                ' neurônios ativos por passo.',
+            'isSystem': true,
+          }));
+        }
+        break;
+      default:
+        if (mounted) setState(() => mensagens.add({
+          'texto': 'Plugin não reconhecido: ' + id,
+          'isSystem': true,
+        }));
     }
   }
-
   Future<void> _runSchoolExam() async {
     final topic = NovaEducationProgress.nextSchoolTopic(educationAssessments);
     if (topic == null) {
